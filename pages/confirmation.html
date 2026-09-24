@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Submitted | JudeTex Power</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="container header-inner">
+            <a href="../index.html" class="logo">JUDETEX<span>POWER</span></a>
+        </div>
+    </header>
+
+    <main class="page-wrapper"
+        style="background-color: var(--bg-secondary); justify-content: center; align-items: center; min-height: calc(100vh - 80px);">
+        <section class="section container w-full" style="padding: 0;">
+            <div class="card p-5 text-center"
+                style="max-width: 500px; margin: 40px auto; border-top: 4px solid var(--accent);">
+
+                <div
+                    style="width: 80px; height: 80px; background: #FFF4ED; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                </div>
+
+                <h2 class="mb-2" style="font-size: 28px;">RENTAL REQUEST SUBMITTED</h2>
+
+                <div class="badge badge-warning mb-4" style="font-size: 14px; padding: 6px 16px;">AWAITING VERIFICATION
+                </div>
+
+                <div
+                    style="background: var(--bg-secondary); border-radius: var(--radius-md); padding: 24px; text-align: left; margin-bottom: 32px;">
+                    <div class="flex justify-between mb-3 border-bottom pb-2"
+                        style="border-bottom: 1px solid var(--border);">
+                        <span style="color: var(--text-light); font-weight: 500;">Rental Reference:</span>
+                        <span id="refId" style="font-weight: 700; color: var(--text-dark);">PB-REF-000000</span>
+                    </div>
+                    <div class="flex justify-between mb-3 border-bottom pb-2"
+                        style="border-bottom: 1px solid var(--border);">
+                        <span style="color: var(--text-light); font-weight: 500;">Power Bank:</span>
+                        <span id="pbId" style="font-weight: 700; color: var(--text-dark);">PB-000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span style="color: var(--text-light); font-weight: 500;">Amount:</span>
+                        <span style="font-weight: 700; color: var(--text-dark);">₦500</span>
+                    </div>
+                </div>
+
+                <p class="mb-4" style="font-size: 16px; font-weight: 500; color: var(--text-dark);">
+                    Please wait for payment verification before coming to the shop for collection.
+                </p>
+
+                <div class="flex flex-col gap-2">
+                    <a href="track-rental.html" class="btn btn-primary w-full">VIEW RENTAL STATUS</a>
+                    <a href="../index.html" class="btn btn-outline w-full">BACK HOME</a>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/utils.js"></script>
+    <script src="../js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const { Storage } = window.JudetexUtils;
+            const completed = Storage.get('completed_rental_request');
+
+            if (completed) {
+                document.getElementById('refId').innerText = completed.id || 'PB-REF-000000';
+                document.getElementById('pbId').innerText = completed.powerBankId || 'PB-000';
+
+                // Save to active tracking
+                Storage.set('current_tracking_ref', completed.id);
+            }
+        });
+    </script>
+</body>
+
+</html>

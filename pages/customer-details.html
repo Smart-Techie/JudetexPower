@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Details | JudeTex Power</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="container header-inner">
+            <a href="../index.html" class="logo">JUDETEX<span>POWER</span></a>
+        </div>
+    </header>
+
+    <main class="page-wrapper" style="background-color: var(--bg-secondary);">
+        <section class="section container">
+            <div style="max-width: 600px; margin: 0 auto;">
+
+                <div class="mb-4 text-center">
+                    <h2 class="mb-1">YOUR DETAILS</h2>
+                    <p>Please provide your information to continue.</p>
+                </div>
+
+                <div class="card p-4">
+                    <form id="detailsForm">
+
+                        <div class="form-group">
+                            <label class="form-label" for="fullName">Full Name</label>
+                            <input type="text" id="fullName" class="form-control" placeholder="Enter your full name"
+                                required>
+                            <span class="form-error">Please enter your full name.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="phone">Phone Number</label>
+                            <input type="tel" id="phone" class="form-control" placeholder="e.g. 08012345678" required>
+                            <span class="form-error">Please enter a valid 10 or 11 digit phone number.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="marketLine">Market Line / Shop Location</label>
+                            <input type="text" id="marketLine" class="form-control" placeholder="e.g. Line 4, Shop 12"
+                                required>
+                            <span class="form-error">Please enter your shop location.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Upload Photo</label>
+                            <p style="font-size: 14px; color: var(--text-light); margin-bottom: 12px;">Your photo helps
+                                us verify your identity when you collect the power bank.</p>
+
+                            <div id="photoUploadArea"
+                                style="border: 2px dashed var(--border); border-radius: var(--radius-md); padding: 32px; text-align: center; cursor: pointer; background: #FAFCFF; transition: all 0.2s;">
+                                <div style="font-size: 40px; margin-bottom: 16px;">📷</div>
+                                <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">Tap to upload
+                                    or take a photo</div>
+                                <div style="font-size: 14px; color: var(--text-light);">JPG or PNG, max 5MB</div>
+                                <input type="file" id="photoInput" accept="image/jpeg, image/png" style="display: none;"
+                                    capture="user">
+                            </div>
+
+                            <div id="photoPreviewArea" style="display: none; position: relative;">
+                                <img id="photoPreview" src="" alt="Preview"
+                                    style="width: 100%; max-height: 300px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                                <div class="flex gap-1" style="position: absolute; bottom: 16px; right: 16px;">
+                                    <button type="button" class="btn btn-secondary" id="changePhotoBtn"
+                                        style="padding: 8px 16px; font-size: 14px; background: white;">Change</button>
+                                    <button type="button" class="btn" id="removePhotoBtn"
+                                        style="padding: 8px 16px; font-size: 14px; background: var(--danger); color: white;">Remove</button>
+                                </div>
+                            </div>
+                            <span id="photoError" class="form-error">Please upload a valid photo.</span>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary w-full"
+                                style="padding: 18px; font-size: 18px;">CONTINUE TO PAYMENT</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/utils.js"></script>
+    <script src="../js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const { Storage, validatePhone, validateFile, showToast } = window.JudetexUtils;
+
+            const req = Storage.get('current_rental_request');
+            if (!req || !req.powerBankId) {
+                window.location.href = 'power-banks.html'; // Redirect if no PB selected
+                return;
+            }
+
+            const uploadArea = document.getElementById('photoUploadArea');
+            const fileInput = document.getElementById('photoInput');
+            const previewArea = document.getElementById('photoPreviewArea');
+            const previewImg = document.getElementById('photoPreview');
+            const changeBtn = document.getElementById('changePhotoBtn');
+            const removeBtn = document.getElementById('removePhotoBtn');
+            const photoError = document.getElementById('photoError');
+
+            let uploadedPhoto = null;
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            changeBtn.addEventListener('click', () => fileInput.click());
+            removeBtn.addEventListener('click', () => {
+                uploadedPhoto = null;
+                fileInput.value = '';
+                previewArea.style.display = 'none';
+                uploadArea.style.display = 'block';
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                const validation = validateFile(file);
+
+                if (validation.valid) {
+                    photoError.style.display = 'none';
+                    uploadedPhoto = file; // Mock purpose, just storing reference
+
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        previewImg.src = ev.target.result;
+                        // Also store base64 string for mock validation on next step
+                        req.photoData = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+
+                    uploadArea.style.display = 'none';
+                    previewArea.style.display = 'block';
+                } else {
+                    showToast(validation.message, 'error');
+                }
+            });
+
+            document.getElementById('detailsForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                let isValid = true;
+
+                const name = document.getElementById('fullName');
+                const phone = document.getElementById('phone');
+                const line = document.getElementById('marketLine');
+
+                if (!name.value.trim()) { name.classList.add('is-invalid'); isValid = false; }
+                else { name.classList.remove('is-invalid'); }
+
+                if (!validatePhone(phone.value)) { phone.classList.add('is-invalid'); isValid = false; }
+                else { phone.classList.remove('is-invalid'); }
+
+                if (!line.value.trim()) { line.classList.add('is-invalid'); isValid = false; }
+                else { line.classList.remove('is-invalid'); }
+
+                if (!uploadedPhoto) {
+                    photoError.style.display = 'block';
+                    isValid = false;
+                }
+
+                if (isValid) {
+                    req.customer = {
+                        name: name.value.trim(),
+                        phone: phone.value.trim(),
+                        marketLine: line.value.trim()
+                    };
+                    Storage.set('current_rental_request', req);
+                    window.location.href = 'payment.html';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Power Banks | JudeTex Power</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="container header-inner">
+            <a href="../index.html" class="logo">JUDETEX<span>POWER</span></a>
+            <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation">☰</button>
+            <nav class="nav-links" id="navLinks">
+                <a href="../index.html" class="nav-link">Home</a>
+                <a href="power-banks.html" class="nav-link active">Power Banks</a>
+                <a href="how-it-works.html" class="nav-link">How It Works</a>
+                <a href="track-rental.html" class="nav-link">Track Rental</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-wrapper" style="background-color: var(--bg-secondary);">
+        <section class="section container content-flex">
+            <div class="text-center mb-5">
+                <h1 class="mb-2">AVAILABLE POWER BANKS</h1>
+                <p style="font-size: 20px; max-width: 600px; margin: 0 auto;">Choose an available power bank and reserve
+                    it for your market day.</p>
+            </div>
+
+            <div id="powerBankGrid" class="powerbank-grid grid">
+                <!-- Power banks populated by JS -->
+            </div>
+
+            <!-- Empty state -->
+            <div id="emptyState" class="card text-center"
+                style="display: none; padding: 64px 24px; max-width: 500px; margin: 0 auto;">
+                <div style="font-size: 48px; margin-bottom: 24px;">🚫</div>
+                <h3 class="mb-2">NO POWER BANKS AVAILABLE</h3>
+                <p>All power banks are currently rented or unavailable.</p>
+            </div>
+
+            <!-- Selection Bar -->
+            <div id="selectionBar"
+                style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 24px; box-shadow: 0 -10px 20px rgba(0,0,0,0.05); z-index: 50; border-top: 1px solid var(--border);">
+                <div class="container flex justify-between items-center"
+                    style="max-width: 800px; gap: 24px; flex-wrap: wrap;">
+                    <div>
+                        <div
+                            style="font-size: 14px; font-weight: 600; color: var(--text-light); text-transform: uppercase;">
+                            SELECTED POWER BANK</div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <div id="selectedPbId" style="font-size: 28px; font-weight: 700; color: var(--primary);">
+                                PB-000</div>
+                            <div style="font-size: 18px; font-weight: 600; color: var(--accent);">₦500 / MARKET DAY
+                            </div>
+                        </div>
+                    </div>
+                    <button id="continueBtn" class="btn btn-primary"
+                        style="padding: 16px 40px; font-size: 18px; width: auto; flex-grow: 1; max-width: 300px;">CONTINUE</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/utils.js"></script>
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/app.js"></script>
+    <script src="../js/customer.js"></script>
+</body>
+
+</html>

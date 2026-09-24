@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | JudeTex Power</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <style>
+        body {
+            background-color: var(--bg-secondary);
+        }
+
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 24px 0;
+            overflow-y: auto;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--accent);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            width: calc(100% - 260px);
+        }
+
+        .topbar {
+            height: var(--header-height);
+            background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .content-area {
+            padding: 32px;
+            flex: 1;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-md);
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-card-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        /* View Switching */
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .mobile-toggle {
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="admin-layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo" style="color: white; font-size: 20px;">JUDETEX<span
+                        style="color: var(--accent);">POWER</span></a>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="sidebar-link active" data-view="dashboard">Dashboard</a>
+                <a href="#" class="sidebar-link" data-view="requests">Rental Requests</a>
+                <a href="#" class="sidebar-link" data-view="rentals">Active Rentals</a>
+                <a href="#" class="sidebar-link" data-view="overdue">Overdue <span class="badge"
+                        style="margin-left:auto; background:var(--danger); color:white;">2</span></a>
+                <a href="#" class="sidebar-link" data-view="returns">Returns & Collection</a>
+                <a href="#" class="sidebar-link" data-view="inventory">Power Banks</a>
+                <a href="#" class="sidebar-link" data-view="customers">Customers</a>
+                <a href="#" class="sidebar-link" data-view="history">Rental History</a>
+
+                <div style="margin: 24px; border-top: 1px solid rgba(255,255,255,0.1);"></div>
+
+                <a href="#" id="logoutBtn" class="sidebar-link" style="color: #FCA5A5;">Logout</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <header class="topbar">
+                <div class="flex items-center gap-2">
+                    <button class="mobile-toggle" id="sidebarToggle"
+                        style="display:none; background:none; border:none; font-size:24px; cursor:pointer;">☰</button>
+                    <h2 id="pageTitle" style="font-size: 20px;">Dashboard Overview</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div
+                        style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
+                        SA</div>
+                    <div style="font-weight: 600; font-size: 14px;">Staff Admin</div>
+                </div>
+            </header>
+
+            <div class="content-area">
+
+                <!-- DASHBOARD VIEW -->
+                <div id="view-dashboard" class="view-section active">
+
+                    <div class="grid grid-cols-4 gap-3 mb-4" id="statsGrid">
+                        <!-- Populated by JS -->
+                        <div class="stat-card">
+                            <div class="stat-card-title">TOTAL POWER BANKS</div>
+                            <div class="stat-card-value">50</div>
+                        </div>
+                        <div class="stat-card" style="border-bottom: 4px solid var(--success);">
+                            <div class="stat-card-title">AVAILABLE</div>
+                            <div class="stat-card-value">28</div>
+                        </div>
+                        <div class="stat-card" style="border-bottom: 4px solid var(--primary);">
+                            <div class="stat-card-title">RENTED</div>
+                            <div class="stat-card-value">18</div>
+                        </div>
+                        <div class="stat-card" style="border-bottom: 4px solid var(--danger);">
+                            <div class="stat-card-title">OVERDUE</div>
+                            <div class="stat-card-value" style="color: var(--danger);">4</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">PENDING REQUESTS</div>
+                            <div class="stat-card-value" style="color: var(--accent);">3</div>
+                        </div>
+                        <div class="stat-card" style="grid-column: span 3; background: var(--primary); color: white;">
+                            <div class="stat-card-title" style="color: rgba(255,255,255,0.7);">TODAY'S REVENUE</div>
+                            <div class="stat-card-value" style="color: white;">₦12,500</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <div class="card">
+                            <h3 class="mb-3" style="font-size: 16px;">Recent Requests</h3>
+                            <div class="data-table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ref</th>
+                                            <th>Power Bank</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentRequestsBody">
+                                        <!-- JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3 class="mb-3" style="font-size: 16px;">Quick Actions</h3>
+                            <div class="grid gap-2">
+                                <button class="btn btn-outline" style="justify-content: flex-start;">🔍 Verify Payment &
+                                    Collect</button>
+                                <button class="btn btn-outline" style="justify-content: flex-start;">↩️ Confirm
+                                    Return</button>
+                                <button class="btn btn-outline" style="justify-content: flex-start;">⚠️ Manage
+                                    Overdue</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RENTAL REQUESTS VIEW -->
+                <div id="view-requests" class="view-section">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex gap-2">
+                            <input type="text" class="form-control" placeholder="Search reference..."
+                                style="width: 250px;">
+                            <select class="form-control" style="width: auto;">
+                                <option>All Statuses</option>
+                                <option>Awaiting Verification</option>
+                                <option>Payment Verified</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card p-0">
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref ID</th>
+                                        <th>Customer</th>
+                                        <th>Power Bank</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="requestsTableBody">
+                                    <!-- Javascript rendered -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OTHER VIEWS PLACEHOLDERS -->
+                <div id="view-rentals" class="view-section">
+                    <div class="card p-5 text-center">
+                        <h3 class="text-light">Active Rentals Mockup</h3>
+                    </div>
+                </div>
+
+                <div id="view-overdue" class="view-section">
+                    <div class="card p-5 text-center">
+                        <h3 class="text-light text-danger">Overdue Management Mockup</h3>
+                    </div>
+                </div>
+
+                <div id="view-returns" class="view-section">
+                    <div class="card p-5 text-center">
+                        <h3 class="text-light">Collection & Returns UI Mockup</h3>
+                    </div>
+                </div>
+
+                <div id="view-inventory" class="view-section">
+                    <div class="card p-5 text-center">
+                        <h3 class="text-light">Power Bank Inventory Mockup</h3>
+                    </div>
+                </div>
+
+                <div id="view-customers" class="view-section">
+                    <div class="card p-5 text-center">
+                        <h3 class="text-light">Customers Directory Mockup</h3>
+                    </div>
+                </div>
+
+                <div id="view-history" class="view-section">
+                    <div class="card p-5 text-center">
+                        <h3 class="text-light">Rental History Mockup</h3>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Modal for Approval -->
+        <div id="verificationModal"
+            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center;">
+            <div class="card p-4 mx-2" style="width:100%; max-width:600px; padding:32px;">
+                <h2 class="mb-4">VERIFY PAYMENT</h2>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <div
+                            style="font-size:12px; font-weight:600; color:var(--text-light); text-transform:uppercase;">
+                            Customer Photo</div>
+                        <div
+                            style="height:150px; background:#f0f0f0; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-top:8px;">
+                            <img id="modal_customerPhoto" src=""
+                                style="width:100%; height:100%; object-fit:cover; border-radius:8px; display:none;">
+                            <span id="modal_noPhoto">No Photo</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div
+                            style="font-size:12px; font-weight:600; color:var(--text-light); text-transform:uppercase;">
+                            Payment Receipt</div>
+                        <div
+                            style="height:150px; background:#f0f0f0; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-top:8px; border: 1px solid var(--border);">
+                            <img id="modal_receipt" src=""
+                                style="width:100%; height:100%; object-fit:contain; display:none;">
+                            <span id="modal_noReceipt">PDF or No File</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-4" style="background:var(--bg-secondary); padding:16px; border-radius:8px;">
+                    <p><strong>Name:</strong> <span id="modal_name"></span></p>
+                    <p><strong>Phone:</strong> <span id="modal_phone"></span></p>
+                    <p><strong>Line:</strong> <span id="modal_line"></span></p>
+                    <p><strong>Power Bank:</strong> <span id="modal_pb"></span></p>
+                    <p><strong>Amount:</strong> ₦500</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" id="modal_approveBtn" style="flex:1;">APPROVE PAYMENT</button>
+                    <button class="btn btn-outline" id="modal_rejectBtn"
+                        style="flex:1; border-color:var(--danger); color:var(--danger);">REJECT</button>
+                    <button class="btn btn-secondary" id="modal_closeBtn">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script src="../js/mock-data.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Payment | JudeTex Power</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="container header-inner">
+            <a href="../index.html" class="logo">JUDETEX<span>POWER</span></a>
+        </div>
+    </header>
+
+    <main class="page-wrapper" style="background-color: var(--bg-secondary);">
+        <section class="section container">
+            <div style="max-width: 540px; margin: 0 auto;">
+
+                <div class="mb-4 text-center">
+                    <h2 class="mb-1">COMPLETE PAYMENT</h2>
+                    <p>Please pay the rental fee and upload your receipt.</p>
+                </div>
+
+                <div class="card p-4 mb-4" style="border: 2px solid var(--primary); text-align: center;">
+                    <div
+                        style="font-size: 14px; font-weight: 600; color: var(--text-light); text-transform: uppercase;">
+                        RENTAL FEE</div>
+                    <div style="font-size: 48px; font-weight: 800; color: var(--primary); margin: 8px 0;">₦500</div>
+                    <div style="font-size: 14px; color: var(--text-body);">For one market day</div>
+                </div>
+
+                <div class="card p-4 mb-4">
+                    <h3 class="mb-3"
+                        style="font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">Payment
+                        Details</h3>
+
+                    <div class="flex justify-between items-center mb-3">
+                        <span style="color: var(--text-light);">Bank:</span>
+                        <span style="font-weight: 600; font-size: 16px;">Opay</span>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-3">
+                        <span style="color: var(--text-light);">Account Name:</span>
+                        <span style="font-weight: 600; font-size: 16px;">Ezeofor chioma/ jude okoye</span>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-4">
+                        <span style="color: var(--text-light);">Account Number:</span>
+                        <span id="accountNumber"
+                            style="font-weight: 700; font-size: 24px; color: var(--primary); letter-spacing: 1px;">8037969203</span>
+                    </div>
+
+                    <button id="copyBtn" class="btn btn-outline w-full"
+                        style="display: flex; gap: 8px; justify-content: center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M8 4V2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2" />
+                            <rect x="2" y="8" width="14" height="14" rx="2" ry="2" />
+                        </svg>
+                        COPY ACCOUNT NUMBER
+                    </button>
+                </div>
+
+                <div class="card p-4">
+                    <h3 class="mb-3" style="font-size: 18px;">Upload Payment Receipt</h3>
+
+                    <div id="receiptUploadArea"
+                        style="border: 2px dashed var(--border); border-radius: var(--radius-md); padding: 32px; text-align: center; cursor: pointer; background: #FAFCFF; transition: all 0.2s;">
+                        <div style="font-size: 40px; margin-bottom: 16px;">🧾</div>
+                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">Tap to upload receipt
+                        </div>
+                        <div style="font-size: 14px; color: var(--text-light);">JPG, PNG or PDF, max 5MB</div>
+                        <input type="file" id="receiptInput" accept="image/jpeg, image/png, application/pdf"
+                            style="display: none;">
+                    </div>
+
+                    <div id="receiptPreviewArea" style="display: none; position: relative;">
+                        <img id="receiptPreview" src="" alt="Receipt Preview"
+                            style="width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border);">
+                        <div id="pdfPreview"
+                            style="display: none; padding: 24px; text-align: center; background: #FAFCFF; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                            <div style="font-size: 32px; margin-bottom: 8px;">📄</div>
+                            <div style="font-weight: 600;">PDF Document Selected</div>
+                        </div>
+
+                        <div class="flex gap-1" style="margin-top: 16px;">
+                            <button type="button" class="btn btn-outline" id="changeReceiptBtn"
+                                style="flex: 1; padding: 12px; font-size: 14px;">Change Receipt</button>
+                            <button type="button" class="btn" id="removeReceiptBtn"
+                                style="flex: 1; padding: 12px; font-size: 14px; background: var(--danger); color: white;">Remove
+                                Receipt</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button id="submitRequestBtn" class="btn btn-primary w-full"
+                            style="padding: 18px; font-size: 18px; display: none;">SUBMIT RENTAL REQUEST</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <script src="../js/utils.js"></script>
+    <script src="../js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const { Storage, showToast, validateFile } = window.JudetexUtils;
+
+            const req = Storage.get('current_rental_request');
+            if (!req || !req.customer) {
+                window.location.href = 'power-banks.html';
+                return;
+            }
+
+            // Copy logic
+            const copyBtn = document.getElementById('copyBtn');
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText('8037969203').then(() => {
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '✓ ACCOUNT NUMBER COPIED';
+                    copyBtn.style.backgroundColor = 'var(--success)';
+                    copyBtn.style.color = 'white';
+                    copyBtn.style.borderColor = 'var(--success)';
+
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalText;
+                        copyBtn.style = '';
+                    }, 3000);
+                });
+            });
+
+            // Receipt logic
+            const uploadArea = document.getElementById('receiptUploadArea');
+            const fileInput = document.getElementById('receiptInput');
+            const previewArea = document.getElementById('receiptPreviewArea');
+            const previewImg = document.getElementById('receiptPreview');
+            const pdfPreview = document.getElementById('pdfPreview');
+            const changeBtn = document.getElementById('changeReceiptBtn');
+            const removeBtn = document.getElementById('removeReceiptBtn');
+            const submitBtn = document.getElementById('submitRequestBtn');
+
+            let receiptValid = false;
+
+            const resetUpload = () => {
+                receiptValid = false;
+                fileInput.value = '';
+                previewArea.style.display = 'none';
+                uploadArea.style.display = 'block';
+                submitBtn.style.display = 'none';
+            };
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            changeBtn.addEventListener('click', () => fileInput.click());
+            removeBtn.addEventListener('click', resetUpload);
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                const validation = validateFile(file);
+
+                if (validation.valid) {
+                    receiptValid = true;
+
+                    if (file.type === 'application/pdf') {
+                        previewImg.style.display = 'none';
+                        pdfPreview.style.display = 'block';
+                        // Store boolean for mock validation
+                        req.receiptData = "MOCK_PDF_DATA";
+                    } else {
+                        pdfPreview.style.display = 'none';
+                        previewImg.style.display = 'block';
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            previewImg.src = ev.target.result;
+                            req.receiptData = ev.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+
+                    uploadArea.style.display = 'none';
+                    previewArea.style.display = 'block';
+                    submitBtn.style.display = 'flex';
+
+                    showToast('Payment receipt uploaded successfully.');
+                } else {
+                    showToast(validation.message, 'error');
+                }
+            });
+
+            submitBtn.addEventListener('click', () => {
+                if (!receiptValid) return;
+
+                // Finalize Request - Create Mock ID
+                const dateStr = Date.now().toString().slice(-6);
+                const refId = `PB-REF-${dateStr}`;
+
+                req.id = refId;
+                req.status = 'AWAITING VERIFICATION';
+                req.amount = 500;
+                req.timestamp = new Date().toISOString();
+
+                // Save to rentals array for admin usage
+                const allRentals = Storage.get('rentals', []);
+                allRentals.push(req);
+                Storage.set('rentals', allRentals);
+
+                // Change PB Status
+                const pbs = Storage.get('powerbanks', []);
+                const idx = pbs.findIndex(p => p.id === req.powerBankId);
+                if (idx !== -1) {
+                    pbs[idx].status = 'RESERVED';
+                    Storage.set('powerbanks', pbs);
+                }
+
+                Storage.set('completed_rental_request', req);
+                Storage.set('current_rental_request', null);
+
+                submitBtn.innerHTML = 'SUBMITTING...';
+                submitBtn.disabled = true;
+
+                setTimeout(() => {
+                    showToast('Rental request submitted successfully.');
+                    window.location.href = 'confirmation.html';
+                }, 1000);
+            });
+        });
+    </script>
+</body>
+
+</html>
