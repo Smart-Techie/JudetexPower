@@ -28,18 +28,8 @@
 
   <main class="page-wrapper">
     <!-- Hero Section -->
-    <section class="section" style="
-      padding-top: 80px; 
-      padding-bottom: 100px; 
-      position: relative;
-      background-image: url('https://share.google/fOME91c5jc4NbVvYi');
-      background-size: cover;
-      background-position: center right;
-    ">
-      <div
-        style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 40%, rgba(255,255,255,0.2) 100%); z-index: 0;">
-      </div>
-      <div class="container hero-grid grid" style="position: relative; z-index: 1;">
+    <section class="section" style="padding-top: 48px; padding-bottom: 48px; overflow: visible;">
+      <div class="container hero-grid grid">
         <div class="hero-content">
           <p class="font-600 mb-1"
             style="color: var(--primary); font-size: 14px; letter-spacing: 1px; text-transform: uppercase;">
@@ -55,27 +45,33 @@
               DAY</p>
           </div>
           <div class="hero-actions flex gap-2">
-            <a href="pages/power-banks.html" class="btn btn-primary" style="padding: 16px 32px; font-size: 18px;">RENT A
-              POWER BANK</a>
-            <a href="pages/how-it-works.html" class="btn btn-outline" style="padding: 16px 32px; font-size: 18px;">HOW
-              IT WORKS</a>
+            <a href="#power-banks" class="btn btn-primary"
+              style="padding: 16px 32px; font-size: 18px; box-shadow: 0 4px 14px rgba(255,107,0,0.3); letter-spacing: 0.5px;">RENT
+              A POWER BANK</a>
           </div>
         </div>
 
         <div class="hero-visual"
-          style="position: relative; min-height: 450px; display: flex; flex-direction: column; justify-content: center;">
-          <!-- Floating elements positioned over the background image -->
-          <div
-            style="align-self: flex-end; margin-bottom: 24px; background: white; padding: 12px 24px; border-radius: 99px; box-shadow: var(--shadow-md); font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
-            <span style="color: var(--accent);">⚡</span> ₦500 / DAY
+          style="position: relative; display: flex; justify-content: center; align-items: center; margin: 0 auto; width: 100%; max-width: 450px;">
+          <!-- Realistic Power Bank Product Cutout -->
+          <img src="assets/images/power-bank.png" alt="JudeTex Power Banks"
+            style="width: 100%; height: auto; max-height: 480px; object-fit: contain; filter: drop-shadow(0 24px 32px rgba(10, 43, 102, 0.15)); display: block; z-index: 2;">
+
+          <!-- Clean Floating Badges -->
+          <div class="float-anim"
+            style="position: absolute; top: 10%; right: 10px; background: white; padding: 8px 16px; border-radius: 99px; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 8px; z-index: 3; font-size: 13px; font-weight: 700; border: 1px solid var(--border);">
+            <div
+              style="background: var(--accent); color: white; width: 22px; height: 22px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 12px;">
+              ⚡</div>
+            POWER
           </div>
-          <div
-            style="align-self: flex-start; margin-left: 20%; margin-bottom: 24px; background: white; padding: 12px 24px; border-radius: 99px; box-shadow: var(--shadow-md); font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
-            <span style="color: var(--success);">✓</span> Same-day rental
-          </div>
-          <div
-            style="align-self: flex-end; margin-right: 10%; background: white; padding: 12px 24px; border-radius: 99px; box-shadow: var(--shadow-md); font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
-            <span style="color: var(--primary);">🔋</span> Available power banks
+
+          <div class="float-reverse-anim"
+            style="position: absolute; bottom: 15%; left: 10px; background: white; padding: 8px 16px; border-radius: 99px; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 8px; z-index: 3; font-size: 13px; font-weight: 700; border: 1px solid var(--border);">
+            <div
+              style="background: var(--primary); color: white; width: 22px; height: 22px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 12px;">
+              ₦</div>
+            500 / DAY
           </div>
         </div>
       </div>
@@ -103,7 +99,143 @@
         </div>
       </div>
     </section>
+
+    <!-- How It Works Section -->
+    <section class="section" id="how-it-works">
+      <div class="container">
+        <h2 class="text-center mb-5">HOW IT WORKS</h2>
+        <div class="timeline-container">
+          <div class="timeline-step">
+            <div class="timeline-circle">
+              01
+              <div class="timeline-icon">👆</div>
+            </div>
+            <div class="timeline-content">
+              <h3>Choose</h3>
+              <p>Pick an available power bank from our inventory.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-circle">
+              02
+              <div class="timeline-icon">📝</div>
+            </div>
+            <div class="timeline-content">
+              <h3>Register</h3>
+              <p>Provide your details for safe tracking.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-circle">
+              03
+              <div class="timeline-icon">💳</div>
+            </div>
+            <div class="timeline-content">
+              <h3>Pay</h3>
+              <p>Pay ₦500 via transfer and upload receipt.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-circle">
+              04
+              <div class="timeline-icon">🔋</div>
+            </div>
+            <div class="timeline-content">
+              <h3>Collect</h3>
+              <p>Take your fully charged power bank.</p>
+            </div>
+          </div>
+          <div class="timeline-step">
+            <div class="timeline-circle">
+              05
+              <div class="timeline-icon">↩</div>
+            </div>
+            <div class="timeline-content">
+              <h3>Return</h3>
+              <p>Bring it back by end of market day.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Power Banks Section -->
+    <section class="section section-light" id="power-banks" style="border-top: 1px solid var(--border);">
+      <div class="container">
+        <h2 class="text-center mb-2">AVAILABLE POWER BANKS</h2>
+        <p class="text-center mb-5" style="max-width: 600px; margin-left: auto; margin-right: auto; font-size: 18px;">
+          Select a fully charged power bank from our inventory to begin your rental.</p>
+
+        <div class="powerbank-grid grid">
+          <!-- Card 1 (Available) -->
+          <div class="product-card">
+            <div class="product-id">PB-001</div>
+            <div class="product-status status-available">AVAILABLE</div>
+            <div class="product-price">₦500 / DAY</div>
+            <a href="pages/power-banks.html" class="btn btn-primary product-btn">SELECT</a>
+          </div>
+
+          <!-- Card 2 (Selected Example) -->
+          <div class="product-card selected">
+            <div class="product-id">PB-002</div>
+            <div class="product-status status-selected">SELECTED</div>
+            <div class="product-price">₦500 / DAY</div>
+            <a href="pages/power-banks.html" class="btn btn-primary product-btn">PROCEED TO RENT</a>
+          </div>
+
+          <!-- Card 3 (Available) -->
+          <div class="product-card">
+            <div class="product-id">PB-003</div>
+            <div class="product-status status-available">AVAILABLE</div>
+            <div class="product-price">₦500 / DAY</div>
+            <a href="pages/power-banks.html" class="btn btn-primary product-btn">SELECT</a>
+          </div>
+        </div>
+
+        <div class="text-center mt-5">
+          <a href="pages/power-banks.html" class="btn btn-outline" style="padding: 16px 32px;">VIEW FULL INVENTORY</a>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer class="footer" style="padding: 60px 0 24px; background: white; border-top: 1px solid var(--border);">
+    <div class="container">
+      <div class="grid"
+        style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; margin-bottom: 40px;">
+        <div>
+          <a href="index.html" class="logo"
+            style="margin-bottom: 16px; display: inline-block;">JUDETEX<span>POWER</span></a>
+          <p style="color: var(--text-light); line-height: 1.6; font-size: 14px;">Reliable power bank rentals for market
+            vendors and shoppers. Stay connected, stay in business.</p>
+        </div>
+        <div>
+          <h4 style="margin-bottom: 16px; font-size: 16px;">Quick Links</h4>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+            <li><a href="pages/power-banks.html" style="color: var(--text-light); text-decoration: none;">Rent Power
+                Bank</a></li>
+            <li><a href="pages/how-it-works.html" style="color: var(--text-light); text-decoration: none;">How It
+                Works</a></li>
+            <li><a href="pages/track-rental.html" style="color: var(--text-light); text-decoration: none;">Track
+                Rental</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="margin-bottom: 16px; font-size: 16px;">Contact Us</h4>
+          <ul
+            style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; color: var(--text-light); font-size: 14px;">
+            <li>Tools &amp; Motor Spare Parts Market, Warri</li>
+            <li>08037969203</li>
+            <li>support@judetexpower.com.ng</li>
+          </ul>
+        </div>
+      </div>
+      <div
+        style="text-align: center; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-light); font-size: 14px;">
+        &copy; 2026 JudeTex Power. All rights reserved.
+      </div>
+    </div>
+  </footer>
 
   <script src="js/utils.js"></script>
   <script src="js/mock-data.js"></script>
