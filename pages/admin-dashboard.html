@@ -680,6 +680,31 @@
                 return;
             }
 
+            // Validate the profile role and active status server-side
+            const profile = await DB.getAdminProfile();
+            if (!profile) {
+                alert('Auth guard: Profile not found for this user. Run migration 013_force_admin.sql in Supabase SQL Editor.');
+                await DB.adminSignOut();
+                window.location.href = 'admin-login.html';
+                return;
+            }
+            if (!profile.is_active) {
+                alert(`Auth guard: Account is inactive (is_active = false). Role is "${profile.role}". Run 013_force_admin.sql in Supabase SQL Editor.`);
+                await DB.adminSignOut();
+                window.location.href = 'admin-login.html';
+                return;
+            }
+            if (profile.role !== 'ADMIN' && profile.role !== 'STAFF') {
+                alert(`Auth guard: Invalid role "${profile.role}". Run 013_force_admin.sql in Supabase SQL Editor.`);
+                await DB.adminSignOut();
+                window.location.href = 'admin-login.html';
+                return;
+            }
+
+            // Populate the admin name in dashboard
+            const adminNameEl = document.getElementById('adminName');
+            if (adminNameEl) adminNameEl.innerText = profile.full_name || profile.email || 'Admin';
+
             // ── Logout ──────────────────────────────────────────────────
             document.getElementById('logoutBtn').addEventListener('click', async () => {
                 await DB.adminSignOut();
