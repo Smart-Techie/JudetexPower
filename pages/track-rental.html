@@ -210,6 +210,11 @@
             const resultDiv = document.getElementById('trackingResult');
 
             const updateTimeline = (status) => {
+                // Map the DB statuses to UI statuses
+                if (status === 'PENDING_VERIFICATION' || status === 'PENDING') status = 'AWAITING VERIFICATION';
+                if (status === 'PAYMENT_VERIFIED') status = 'PAYMENT VERIFIED';
+                if (status === 'READY_FOR_COLLECTION') status = 'READY FOR COLLECTION';
+
                 const statuses = [
                     'AWAITING VERIFICATION',
                     'PAYMENT VERIFIED',
@@ -264,7 +269,7 @@
                 });
                 await waitForDB();
 
-                const target = await window.SupabaseDB.getRentalById(refId);
+                const target = await window.SupabaseDB.getPublicTrackData(refId);
 
                 if (target) {
                     document.getElementById('displayRef').innerText = target.id;

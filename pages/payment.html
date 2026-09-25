@@ -215,11 +215,8 @@
                     const ext = receiptFile.name.split('.').pop();
                     const receiptPath = await DB.uploadFile(receiptFile, 'payment-receipts', 'receipts', `${ts}_receipt.${ext}`);
 
-                    // 2. Upload customer photo (File object stored in req.photoFile, if available)
-                    let photoPath = null;
-                    if (req.photoFile) {
-                        photoPath = await DB.uploadFile(req.photoFile, 'customer-photos', 'photos', `${ts}_photo.jpg`);
-                    }
+                    // 2. Photo was already uploaded in customer-details.html
+                    let photoPath = req.photoPath || null;
 
                     // 3. Build & insert rental record
                     const refId = 'JTP-' + ts.toString().slice(-6);
