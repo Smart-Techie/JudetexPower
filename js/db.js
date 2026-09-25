@@ -77,13 +77,9 @@ async function uploadFile(file, bucket, folder, filename) {
         .upload(path, file, { upsert: true });
 
     if (uploadError) {
-        console.error(`[DB] uploadFile [${bucket}]:`, uploadError);
+        console.error("PHOTO UPLOAD ERROR:", uploadError);
         return null;
     }
-
-    // Private buckets require signed URLs for admin view, but returning the path is better for DB storage
-    // The frontend should ask DB to generate a signed URL when displaying it.
-    // However, if we must return a string that can be used directly or stored, we return the path.
     return path;
 }
 
@@ -107,7 +103,8 @@ async function getPowerBanks(status = null) {
         id: pb.power_bank_number, // Map legacy PB-xxx ID usage on frontend to DB power_bank_number
         internalId: pb.id,        // DB UUID
         status: pb.status,
-        condition: pb.condition
+        condition: pb.condition,
+        imageUrl: pb.image_url
     }));
 }
 
@@ -165,6 +162,11 @@ async function getCustomers() {
 ───────────────────────────────────────────────────── */
 
 async function createRentalRequest(payload) {
+    if (!payload.photoPath) {
+        console.error("Rental creation rejected: Customer photo/storage path is missing.");
+        return false;
+    }
+
     // 1. Resolve PB UUID (Assuming frontend only knows 'PB-001')
     const { data: pbs } = await supabase.from('power_banks').select('id').eq('power_bank_number', payload.powerBankId).single();
     if (!pbs) return false;

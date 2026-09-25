@@ -167,30 +167,9 @@
         <p class="text-center mb-5" style="max-width: 600px; margin-left: auto; margin-right: auto; font-size: 18px;">
           Select a fully charged power bank from our inventory to begin your rental.</p>
 
-        <div class="powerbank-grid grid">
-          <!-- Card 1 (Available) -->
-          <div class="product-card">
-            <div class="product-id">PB-001</div>
-            <div class="product-status status-available">AVAILABLE</div>
-            <div class="product-price">₦500 / DAY</div>
-            <a href="pages/power-banks.html" class="btn btn-primary product-btn">SELECT</a>
-          </div>
-
-          <!-- Card 2 (Selected Example) -->
-          <div class="product-card selected">
-            <div class="product-id">PB-002</div>
-            <div class="product-status status-selected">SELECTED</div>
-            <div class="product-price">₦500 / DAY</div>
-            <a href="pages/power-banks.html" class="btn btn-primary product-btn">PROCEED TO RENT</a>
-          </div>
-
-          <!-- Card 3 (Available) -->
-          <div class="product-card">
-            <div class="product-id">PB-003</div>
-            <div class="product-status status-available">AVAILABLE</div>
-            <div class="product-price">₦500 / DAY</div>
-            <a href="pages/power-banks.html" class="btn btn-primary product-btn">SELECT</a>
-          </div>
+        <div class="powerbank-grid grid" id="homePowerBankGrid">
+          <div style="text-align:center;padding:60px;color:var(--text-light);grid-column:1/-1;">Loading available power
+            banks…</div>
         </div>
 
         <div class="text-center mt-5">
@@ -239,8 +218,50 @@
   </footer>
 
   <script src="js/utils.js"></script>
-  <script src="js/mock-data.js"></script>
   <script src="js/app.js"></script>
+  <script type="module">
+    import './js/db.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const waitForDB = () => new Promise(resolve => {
+        if (window.SupabaseDB) return resolve();
+        const timer = setInterval(() => {
+          if (window.SupabaseDB) { clearInterval(timer); resolve(); }
+        }, 50);
+      });
+      await waitForDB();
+
+      const DB = window.SupabaseDB;
+      const availablePBs = await DB.getPowerBanks('AVAILABLE');
+
+      const pbGrid = document.getElementById('homePowerBankGrid');
+      pbGrid.innerHTML = '';
+
+      if (availablePBs.length === 0) {
+        pbGrid.innerHTML = '<p class="text-center w-full" style="grid-column: 1/-1;">No power banks currently available.</p>';
+      } else {
+        // Show only first 3 on home page
+        availablePBs.slice(0, 3).forEach(pb => {
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.style.display = 'flex';
+          card.style.flexDirection = 'column';
+          const imgUrl = pb.imageUrl || 'assets/images/power-bank.jpeg';
+
+          card.innerHTML = `
+                    <div style="margin-bottom: 16px; background: #FAFCFF; border-radius: 8px; padding: 16px; min-height: 140px; display: flex; align-items: center; justify-content: center;">
+                        <img src="${imgUrl}" alt="Power Bank ${pb.id}" style="height: 120px; object-fit: contain;">
+                    </div>
+                    <div class="product-id" style="font-size: 28px; font-weight: 800; margin-bottom: 8px;">${pb.id}</div>
+                    <div class="product-status status-available">AVAILABLE</div>
+                    <div class="product-price">₦500 / DAY</div>
+                    <a href="pages/power-banks.html" class="btn btn-primary product-btn">SELECT</a>
+                  `;
+          pbGrid.appendChild(card);
+        });
+      }
+    });
+  </script>
 </body>
 
 </html>

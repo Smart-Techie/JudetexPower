@@ -1229,9 +1229,13 @@
 
             // ── Admin Register Form Logic ─────────────────────────────────
             let regSelectedPb = null, regPhotoFile = null, regReceiptFile = null;
+            window.photoState = 'none'; // 'none', 'photoCaptured', 'photoUploading', 'photoUploaded', 'photoUploadError'
+            window.uploadedPhotoPath = null;
 
             window.resetRegistrationForm = () => {
                 regSelectedPb = null; regPhotoFile = null; regReceiptFile = null;
+                window.photoState = 'none';
+                window.uploadedPhotoPath = null;
                 document.getElementById('reg_name').value = '';
                 document.getElementById('reg_phone').value = '';
                 document.getElementById('reg_line').value = '';
@@ -1308,12 +1312,7 @@
             document.getElementById('reg_photo_input').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    regPhotoFile = file;
-                    const rdr = new FileReader(); rdr.onload = ev => {
-                        document.getElementById('reg_photo_img').src = ev.target.result;
-                        document.getElementById('reg_photo_img').style.display = 'block';
-                        document.getElementById('reg_photo_text').style.display = 'none';
-                    }; rdr.readAsDataURL(file);
+                    processSelectedPhoto(file);
                 }
             });
 
@@ -1385,18 +1384,38 @@
                 startCamera(currentFacingMode);
             });
 
+            const processSelectedPhoto = async (file) => {
+                regPhotoFile = file;
+                const url = URL.createObjectURL(file);
+                document.getElementById('reg_photo_img').src = url;
+                document.getElementById('reg_photo_img').style.display = 'block';
+                document.getElementById('reg_photo_text').style.display = 'none';
+
+                // Real-time Upload
+                window.photoState = 'photoUploading';
+                window.uploadedPhotoPath = null;
+                showToast('Uploading photo...', 'info');
+
+                const ts = Date.now();
+                const path = await DB.uploadFile(file, 'customer-photos', 'photos', `${ts}_photo.jpg`);
+
+                if (path) {
+                    window.photoState = 'photoUploaded';
+                    window.uploadedPhotoPath = path;
+                    showToast('Photo uploaded successfully.', 'success');
+                } else {
+                    window.photoState = 'photoUploadError';
+                    document.getElementById('reg_photo_img').style.display = 'none';
+                    document.getElementById('reg_photo_text').style.display = 'block';
+                    document.getElementById('reg_photo_text').innerText = 'No photo captured';
+                    alert("Photo upload failed. Please try again.");
+                }
+            };
+
             document.getElementById('cam_useBtn').addEventListener('click', () => {
                 if (capturedBlob) {
-                    // Create File object to fit existing flow
                     const file = new File([capturedBlob], "capture.jpg", { type: "image/jpeg" });
-                    regPhotoFile = file;
-
-                    // Show in form preview
-                    const url = URL.createObjectURL(capturedBlob);
-                    document.getElementById('reg_photo_img').src = url;
-                    document.getElementById('reg_photo_img').style.display = 'block';
-                    document.getElementById('reg_photo_text').style.display = 'none';
-
+                    processSelectedPhoto(file);
                     stopCamera();
                     camModal.style.display = 'none';
                 }
@@ -1416,10 +1435,9 @@
 
                 if (!regSelectedPb) return showToast('Please select a Power Bank', 'error');
                 if (!name || !phone || !line) return showToast('Please fill all customer details', 'error');
-                // Photo is strongly recommended but not a hard block for admin
-                if (!regPhotoFile) {
-                    const proceed = confirm('No photo captured. Proceed without customer photo? (Not recommended)');
-                    if (!proceed) return;
+
+                if (window.photoState !== 'photoUploaded' || !window.uploadedPhotoPath) {
+                    return showToast('Customer photo must be uploaded first.', 'error');
                 }
 
                 const method = document.querySelector('input[name="reg_payment_method"]:checked').value;
@@ -1457,23 +1475,25 @@
                 btn.disabled = true;
                 btn.innerText = 'Creating...';
 
+                if (window.photoState !== 'photoUploaded' || !window.uploadedPhotoPath) {
+                    alert('Photo upload failed. Please try again.');
+                    btn.disabled = false;
+                    btn.innerText = 'CREATE RENTAL';
+                    return;
+                }
+
                 const method = document.querySelector('input[name="reg_payment_method"]:checked').value;
                 const reqId = 'JTP-' + Date.now().toString().slice(-6);
+                let receiptPath = null;
 
-                let photoPath = null, receiptPath = null;
-
-                if (regPhotoFile) photoPath = await DB.uploadFile(regPhotoFile, 'customer-photos', 'photos', `${reqId}_photo.jpg`);
-                if (regReceiptFile) receiptPath = await DB.uploadFile(regReceiptFile, 'payment-receipts', 'receipts', `${reqId}_receipt.jpg`);
-
-                // Photo is optional — if upload fails we still proceed (admin can note manually)
-                if (regPhotoFile && !photoPath) {
-                    const goAhead = confirm('Photo upload failed. Continue creating rental without photo?');
-                    if (!goAhead) {
-                        btn.disabled = false;
-                        btn.innerText = 'CREATE RENTAL';
-                        return;
-                    }
+                if (window.photoState !== 'photoUploaded' || !window.uploadedPhotoPath) {
+                    alert('Photo upload failed. Please try again.');
+                    btn.disabled = false;
+                    btn.innerText = 'CREATE RENTAL';
+                    return;
                 }
+
+                if (regReceiptFile) receiptPath = await DB.uploadFile(regReceiptFile, 'payment-receipts', 'receipts', `${reqId}_receipt.jpg`);
 
                 const payload = {
                     id: reqId,
@@ -1486,7 +1506,7 @@
                         phone: document.getElementById('rev_phone').innerText,
                         marketLine: document.getElementById('rev_line').innerText
                     },
-                    photoPath,
+                    photoPath: window.uploadedPhotoPath,
                     receiptPath,
                     paymentMethod: method,
                     receiptBypassed: method === 'CASH',
