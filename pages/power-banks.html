@@ -78,9 +78,6 @@
         const DB = window.SupabaseDB;
         const { Storage, showToast } = window.JudetexUtils;
 
-        // Clear any old, stale rental reservation state from previous aborted attempts
-        Storage.remove('current_rental_request');
-
         let selectedPowerBank = null;
 
         // ── Loading state ──────────────────────────────────────────────
@@ -99,21 +96,24 @@
         } else {
             availablePBs.forEach(pb => {
                 const card = document.createElement('div');
-                card.className = 'product-card';
+                card.className = 'card pb-card';
                 card.style.cursor = 'pointer';
-
-                const imgUrl = pb.imageUrl || '../assets/images/power-bank.jpeg';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.justifyContent = 'space-between';
 
                 card.innerHTML = `
-                    <div style="margin-bottom: 16px; background: #FAFCFF; border-radius: 8px; padding: 16px; min-height: 140px; display: flex; align-items: center; justify-content: center;">
-                        <img src="${imgUrl}" alt="Power Bank ${pb.id}" style="height: 120px; object-fit: contain;">
+                    <div class="mb-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span style="font-weight:600;color:var(--text-light);text-transform:uppercase;font-size:14px;">POWER BANK</span>
+                            <span class="badge badge-success">● AVAILABLE</span>
+                        </div>
+                        <div style="font-size:40px;font-weight:800;color:var(--primary);line-height:1;">${pb.id}</div>
                     </div>
-                    <div class="product-id" style="font-size: 28px; font-weight: 800; margin-bottom: 8px;">${pb.id}</div>
-                    <div class="flex items-center justify-center gap-2 mb-3">
-                        <span class="badge badge-success pb-status-badge">● AVAILABLE</span>
+                    <div>
+                        <div class="mb-3" style="font-size:20px;font-weight:700;color:var(--text-dark);">₦500 <span style="font-size:14px;font-weight:600;color:var(--text-light);">/ DAY</span></div>
+                        <button class="btn btn-outline w-full pb-select-btn" data-id="${pb.id}">SELECT</button>
                     </div>
-                    <div class="product-price" style="font-size:20px;font-weight:700;color:var(--text-body);margin-bottom:16px;">₦500 <span style="font-size:14px;font-weight:600;color:var(--text-light);">/ DAY</span></div>
-                    <button class="btn btn-outline w-full pb-select-btn" data-id="${pb.id}">SELECT</button>
                 `;
 
                 card.addEventListener('click', () => selectPowerBank(pb.id, card));
@@ -123,43 +123,22 @@
 
         // ── Selection logic ────────────────────────────────────────────
         function selectPowerBank(id, cardElement) {
-            document.querySelectorAll('.product-card').forEach(c => {
-                c.classList.remove('selected');
+            document.querySelectorAll('.pb-card').forEach(c => {
                 c.style.borderColor = 'var(--border)';
                 c.style.boxShadow = 'none';
                 c.style.backgroundColor = 'white';
-
-                const badge = c.querySelector('.pb-status-badge');
-                if (badge) {
-                    badge.className = 'badge badge-success pb-status-badge';
-                    badge.innerText = '● AVAILABLE';
-                }
-
                 const btn = c.querySelector('.pb-select-btn');
-                if (btn) {
-                    btn.className = 'btn btn-outline w-full pb-select-btn';
-                    btn.innerText = 'SELECT';
-                }
+                btn.className = 'btn btn-outline w-full pb-select-btn';
+                btn.innerText = 'SELECT';
             });
 
-            cardElement.classList.add('selected');
             cardElement.style.borderColor = 'var(--accent)';
             cardElement.style.boxShadow = '0 0 0 4px rgba(255,107,0,0.1)';
             cardElement.style.backgroundColor = '#FFFBF7';
 
-            const badge = cardElement.querySelector('.pb-status-badge');
-            if (badge) {
-                badge.className = 'badge pb-status-badge';
-                badge.style.background = '#FFE4E6';
-                badge.style.color = 'var(--accent)';
-                badge.innerText = '● SELECTED';
-            }
-
             const btn = cardElement.querySelector('.pb-select-btn');
-            if (btn) {
-                btn.className = 'btn btn-primary w-full pb-select-btn';
-                btn.innerText = 'PROCEED TO RENT';
-            }
+            btn.className = 'btn btn-primary w-full pb-select-btn';
+            btn.innerText = 'SELECTED';
 
             selectedPowerBank = id;
 
@@ -171,17 +150,6 @@
                 document.body.style.paddingBottom = '120px';
             }
         }
-
-        // Add a global click handler for the 'btn' inside the card to directly proceed
-        pbGrid.addEventListener('click', (e) => {
-            if (e.target.classList.contains('pb-select-btn') && e.target.innerText === 'PROCEED TO RENT') {
-                // user clicked the PROCEED TO RENT button explicitly
-                if (selectedPowerBank) {
-                    Storage.set('current_rental_request', { powerBankId: selectedPowerBank });
-                    window.location.href = 'customer-details.html';
-                }
-            }
-        });
 
         const continueBtn = document.getElementById('continueBtn');
         if (continueBtn) {
