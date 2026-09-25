@@ -1,0 +1,21 @@
+{
+    "name": "JudeTex Power",
+    "short_name": "JudeTex",
+    "description": "Rent a power bank for ₦500 per market day in Warri Market.",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#F4F7FB",
+    "theme_color": "#0F3D8C",
+    "icons": [
+        {
+            "src": "./assets/images/power-bank.jpeg",
+            "sizes": "192x192",
+            "type": "image/jpeg"
+        },
+        {
+            "src": "./assets/images/power-bank.jpeg",
+            "sizes": "512x512",
+            "type": "image/jpeg"
+        }
+    ]
+}

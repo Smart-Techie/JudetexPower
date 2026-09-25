@@ -13,3 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        // Find correct path to sw.js based on current directory
+        const swPath = window.location.pathname.includes('/pages/') ? '../sw.js' : './sw.js';
+        navigator.serviceWorker.register(swPath).catch(err => {
+            console.log('SW registration failed:', err);
+        });
+    });
+}
