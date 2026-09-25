@@ -20,6 +20,7 @@
                 <a href="power-banks.html" class="nav-link active">Power Banks</a>
                 <a href="how-it-works.html" class="nav-link">How It Works</a>
                 <a href="track-rental.html" class="nav-link">Track Rental</a>
+                <a href="admin-login.html" class="nav-link" style="color:var(--primary); font-weight:700;">Admin</a>
             </nav>
         </div>
     </header>
@@ -68,9 +69,96 @@
     </main>
 
     <script src="../js/utils.js"></script>
-    <script src="../js/mock-data.js"></script>
     <script src="../js/app.js"></script>
-    <script src="../js/customer.js"></script>
+    <script type="module">
+        import '../js/db.js';   // populates window.SupabaseDB
+
+        const DB = window.SupabaseDB;
+        const { Storage, showToast } = window.JudetexUtils;
+
+        let selectedPowerBank = null;
+
+        // ── Loading state ──────────────────────────────────────────────
+        const pbGrid = document.getElementById('powerBankGrid');
+        const emptyDiv = document.getElementById('emptyState');
+
+        // Show spinner while we wait
+        pbGrid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-light);grid-column:1/-1;">Loading available power banks…</div>';
+
+        // ── Fetch ───────────────────────────────────────────────
+        const availablePBs = await DB.getPowerBanks('AVAILABLE');
+        pbGrid.innerHTML = '';
+
+        if (availablePBs.length === 0) {
+            emptyDiv.style.display = 'block';
+        } else {
+            availablePBs.forEach(pb => {
+                const card = document.createElement('div');
+                card.className = 'card pb-card';
+                card.style.cursor = 'pointer';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.justifyContent = 'space-between';
+
+                card.innerHTML = `
+                    <div class="mb-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span style="font-weight:600;color:var(--text-light);text-transform:uppercase;font-size:14px;">POWER BANK</span>
+                            <span class="badge badge-success">● AVAILABLE</span>
+                        </div>
+                        <div style="font-size:40px;font-weight:800;color:var(--primary);line-height:1;">${pb.id}</div>
+                    </div>
+                    <div>
+                        <div class="mb-3" style="font-size:20px;font-weight:700;color:var(--text-dark);">₦500 <span style="font-size:14px;font-weight:600;color:var(--text-light);">/ DAY</span></div>
+                        <button class="btn btn-outline w-full pb-select-btn" data-id="${pb.id}">SELECT</button>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => selectPowerBank(pb.id, card));
+                pbGrid.appendChild(card);
+            });
+        }
+
+        // ── Selection logic ────────────────────────────────────────────
+        function selectPowerBank(id, cardElement) {
+            document.querySelectorAll('.pb-card').forEach(c => {
+                c.style.borderColor = 'var(--border)';
+                c.style.boxShadow = 'none';
+                c.style.backgroundColor = 'white';
+                const btn = c.querySelector('.pb-select-btn');
+                btn.className = 'btn btn-outline w-full pb-select-btn';
+                btn.innerText = 'SELECT';
+            });
+
+            cardElement.style.borderColor = 'var(--accent)';
+            cardElement.style.boxShadow = '0 0 0 4px rgba(255,107,0,0.1)';
+            cardElement.style.backgroundColor = '#FFFBF7';
+
+            const btn = cardElement.querySelector('.pb-select-btn');
+            btn.className = 'btn btn-primary w-full pb-select-btn';
+            btn.innerText = 'SELECTED';
+
+            selectedPowerBank = id;
+
+            const bar = document.getElementById('selectionBar');
+            const displayId = document.getElementById('selectedPbId');
+            if (bar && displayId) {
+                displayId.innerText = id;
+                bar.style.display = 'block';
+                document.body.style.paddingBottom = '120px';
+            }
+        }
+
+        const continueBtn = document.getElementById('continueBtn');
+        if (continueBtn) {
+            continueBtn.addEventListener('click', () => {
+                if (selectedPowerBank) {
+                    Storage.set('current_rental_request', { powerBankId: selectedPowerBank });
+                    window.location.href = 'customer-details.html';
+                }
+            });
+        }
+    </script>
 </body>
 
 </html>

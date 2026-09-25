@@ -96,6 +96,7 @@
                 <a href="power-banks.html" class="nav-link">Power Banks</a>
                 <a href="how-it-works.html" class="nav-link">How It Works</a>
                 <a href="track-rental.html" class="nav-link active">Track Rental</a>
+                <a href="admin-login.html" class="nav-link" style="color:var(--primary); font-weight:700;">Admin</a>
             </nav>
         </div>
     </header>
@@ -138,7 +139,6 @@
                     </div>
 
                     <div class="tracking-timeline">
-                        <!-- Steps are dynamically generated or classes manipulated based on status -->
                         <div id="step-submitted" class="tracking-step">
                             <div class="step-icon">📋</div>
                             <div class="step-line"></div>
@@ -198,8 +198,9 @@
     </main>
 
     <script src="../js/utils.js"></script>
-    <script src="../js/mock-data.js"></script>
     <script src="../js/app.js"></script>
+    <!-- Supabase DB module — sets window.SupabaseDB -->
+    <script type="module" src="../js/db.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const { Storage } = window.JudetexUtils;
@@ -218,7 +219,7 @@
                 ];
 
                 let currentIndex = statuses.indexOf(status);
-                if (status === 'OVERDUE') currentIndex = 3; // Past collected, but not returned
+                if (status === 'OVERDUE') currentIndex = 3;
 
                 const steps = [
                     document.getElementById('step-submitted'),
@@ -228,20 +229,18 @@
                     document.getElementById('step-returned')
                 ];
 
-                // Reset all
                 steps.forEach(s => { s.classList.remove('active'); s.classList.remove('completed'); });
 
                 if (currentIndex !== -1) {
                     for (let i = 0; i < currentIndex; i++) {
                         steps[i].classList.add('completed');
                     }
-                    if (currentIndex < steps.length) { // if not completed return
+                    if (currentIndex < steps.length) {
                         steps[currentIndex].classList.add(status === 'OVERDUE' ? 'completed' : 'active');
                     }
                 }
 
                 if (status === 'OVERDUE') {
-                    // Special overdue styling
                     document.getElementById('overdueAlert').style.display = 'block';
                     steps[3].classList.replace('completed', 'active');
                     steps[3].querySelector('.step-icon').style.backgroundColor = '#FEE2E2';
@@ -252,10 +251,20 @@
                 }
             };
 
-            const track = (refId) => {
+            const track = async (refId) => {
                 errorMsg.style.display = 'none';
-                const allRentals = Storage.get('rentals', []);
-                const target = allRentals.find(r => r.id.toLowerCase() === refId.toLowerCase());
+                resultDiv.style.display = 'none';
+
+                // Wait for the ES module to finish populating window.SupabaseDB
+                const waitForDB = () => new Promise(resolve => {
+                    if (window.SupabaseDB) return resolve();
+                    const t = setInterval(() => {
+                        if (window.SupabaseDB) { clearInterval(t); resolve(); }
+                    }, 50);
+                });
+                await waitForDB();
+
+                const target = await window.SupabaseDB.getRentalById(refId);
 
                 if (target) {
                     document.getElementById('displayRef').innerText = target.id;
@@ -263,7 +272,6 @@
                     updateTimeline(target.status);
                     resultDiv.style.display = 'block';
                 } else {
-                    resultDiv.style.display = 'none';
                     errorMsg.style.display = 'block';
                 }
             };
@@ -274,7 +282,7 @@
                 if (refId) track(refId);
             });
 
-            // Auto-track if we have a current one
+            // Auto-track if we navigated here from the confirmation page
             const currentRef = Storage.get('current_tracking_ref');
             if (currentRef) {
                 document.getElementById('refInput').value = currentRef;

@@ -96,7 +96,7 @@
 
             const req = Storage.get('current_rental_request');
             if (!req || !req.powerBankId) {
-                window.location.href = 'power-banks.html'; // Redirect if no PB selected
+                window.location.href = 'power-banks.html';
                 return;
             }
 
@@ -108,12 +108,14 @@
             const removeBtn = document.getElementById('removePhotoBtn');
             const photoError = document.getElementById('photoError');
 
-            let uploadedPhoto = null;
+            // We store the File object in a module-level variable so the payment page can upload it.
+            // The file is passed forward via sessionStorage as a reference key.
+            let photoFile = null;
 
             uploadArea.addEventListener('click', () => fileInput.click());
             changeBtn.addEventListener('click', () => fileInput.click());
             removeBtn.addEventListener('click', () => {
-                uploadedPhoto = null;
+                photoFile = null;
                 fileInput.value = '';
                 previewArea.style.display = 'none';
                 uploadArea.style.display = 'block';
@@ -125,13 +127,11 @@
 
                 if (validation.valid) {
                     photoError.style.display = 'none';
-                    uploadedPhoto = file; // Mock purpose, just storing reference
+                    photoFile = file;
 
                     const reader = new FileReader();
                     reader.onload = (ev) => {
                         previewImg.src = ev.target.result;
-                        // Also store base64 string for mock validation on next step
-                        req.photoData = ev.target.result;
                     };
                     reader.readAsDataURL(file);
 
@@ -160,7 +160,7 @@
                 if (!line.value.trim()) { line.classList.add('is-invalid'); isValid = false; }
                 else { line.classList.remove('is-invalid'); }
 
-                if (!uploadedPhoto) {
+                if (!photoFile) {
                     photoError.style.display = 'block';
                     isValid = false;
                 }
@@ -169,9 +169,19 @@
                     req.customer = {
                         name: name.value.trim(),
                         phone: phone.value.trim(),
-                        marketLine: line.value.trim()
+                        marketLine: line.value.trim(),
                     };
+
+                    // Attach the File object so payment.html can upload it directly to Supabase Storage
+                    req.photoFile = photoFile;
+
                     Storage.set('current_rental_request', req);
+
+                    // Note: File objects cannot be JSON-serialised, so we store the
+                    // reference in a page-level global that payment.html can read
+                    // if it is opened in the same tab (same JS runtime).
+                    window.__judetexPhotoFile = photoFile;
+
                     window.location.href = 'payment.html';
                 }
             });

@@ -30,7 +30,8 @@
                     <div
                         style="font-size: 14px; font-weight: 600; color: var(--text-light); text-transform: uppercase;">
                         RENTAL FEE</div>
-                    <div style="font-size: 48px; font-weight: 800; color: var(--primary); margin: 8px 0;">₦500</div>
+                    <div style="font-size: 48px; font-weight: 800; color: var(--primary); margin: 8px 0;">&#8358;500
+                    </div>
                     <div style="font-size: 14px; color: var(--text-body);">For one market day</div>
                 </div>
 
@@ -109,6 +110,8 @@
 
     <script src="../js/utils.js"></script>
     <script src="../js/app.js"></script>
+    <!-- Supabase DB module — sets window.SupabaseDB -->
+    <script type="module" src="../js/db.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const { Storage, showToast, validateFile } = window.JudetexUtils;
@@ -119,24 +122,24 @@
                 return;
             }
 
-            // Copy logic
+            // ── Copy account number ──────────────────────────────────────
             const copyBtn = document.getElementById('copyBtn');
             copyBtn.addEventListener('click', () => {
                 navigator.clipboard.writeText('8037969203').then(() => {
-                    const originalText = copyBtn.innerHTML;
-                    copyBtn.innerHTML = '✓ ACCOUNT NUMBER COPIED';
+                    const originalHTML = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '&#10003; ACCOUNT NUMBER COPIED';
                     copyBtn.style.backgroundColor = 'var(--success)';
                     copyBtn.style.color = 'white';
                     copyBtn.style.borderColor = 'var(--success)';
 
                     setTimeout(() => {
-                        copyBtn.innerHTML = originalText;
+                        copyBtn.innerHTML = originalHTML;
                         copyBtn.style = '';
                     }, 3000);
                 });
             });
 
-            // Receipt logic
+            // ── Receipt upload ───────────────────────────────────────────
             const uploadArea = document.getElementById('receiptUploadArea');
             const fileInput = document.getElementById('receiptInput');
             const previewArea = document.getElementById('receiptPreviewArea');
@@ -146,10 +149,10 @@
             const removeBtn = document.getElementById('removeReceiptBtn');
             const submitBtn = document.getElementById('submitRequestBtn');
 
-            let receiptValid = false;
+            let receiptFile = null;
 
             const resetUpload = () => {
-                receiptValid = false;
+                receiptFile = null;
                 fileInput.value = '';
                 previewArea.style.display = 'none';
                 uploadArea.style.display = 'block';
@@ -162,24 +165,19 @@
 
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
-                const validation = validateFile(file);
+                const validation = validateFile(file, 5, ['image/jpeg', 'image/png', 'application/pdf']);
 
                 if (validation.valid) {
-                    receiptValid = true;
+                    receiptFile = file;
 
                     if (file.type === 'application/pdf') {
                         previewImg.style.display = 'none';
                         pdfPreview.style.display = 'block';
-                        // Store boolean for mock validation
-                        req.receiptData = "MOCK_PDF_DATA";
                     } else {
                         pdfPreview.style.display = 'none';
                         previewImg.style.display = 'block';
                         const reader = new FileReader();
-                        reader.onload = (ev) => {
-                            previewImg.src = ev.target.result;
-                            req.receiptData = ev.target.result;
-                        };
+                        reader.onload = (ev) => { previewImg.src = ev.target.result; };
                         reader.readAsDataURL(file);
                     }
 
@@ -193,41 +191,66 @@
                 }
             });
 
-            submitBtn.addEventListener('click', () => {
-                if (!receiptValid) return;
+            // ── Submit ───────────────────────────────────────────────────
+            submitBtn.addEventListener('click', async () => {
+                if (!receiptFile) return;
 
-                // Finalize Request - Create Mock ID
-                const dateStr = Date.now().toString().slice(-6);
-                const refId = `PB-REF-${dateStr}`;
-
-                req.id = refId;
-                req.status = 'AWAITING VERIFICATION';
-                req.amount = 500;
-                req.timestamp = new Date().toISOString();
-
-                // Save to rentals array for admin usage
-                const allRentals = Storage.get('rentals', []);
-                allRentals.push(req);
-                Storage.set('rentals', allRentals);
-
-                // Change PB Status
-                const pbs = Storage.get('powerbanks', []);
-                const idx = pbs.findIndex(p => p.id === req.powerBankId);
-                if (idx !== -1) {
-                    pbs[idx].status = 'RESERVED';
-                    Storage.set('powerbanks', pbs);
-                }
-
-                Storage.set('completed_rental_request', req);
-                Storage.set('current_rental_request', null);
-
-                submitBtn.innerHTML = 'SUBMITTING...';
+                submitBtn.innerHTML = 'SUBMITTING&#8230;';
                 submitBtn.disabled = true;
 
-                setTimeout(() => {
+                // Wait until the ES module has populated window.SupabaseDB
+                const waitForDB = () => new Promise(resolve => {
+                    if (window.SupabaseDB) return resolve();
+                    const timer = setInterval(() => {
+                        if (window.SupabaseDB) { clearInterval(timer); resolve(); }
+                    }, 50);
+                });
+                await waitForDB();
+
+                try {
+                    const DB = window.SupabaseDB;
+                    const ts = Date.now();
+
+                    // 1. Upload receipt to Supabase Storage
+                    const ext = receiptFile.name.split('.').pop();
+                    const receiptPath = await DB.uploadFile(receiptFile, 'payment-receipts', 'receipts', `${ts}_receipt.${ext}`);
+
+                    // 2. Upload customer photo (File object stored in req.photoFile, if available)
+                    let photoPath = null;
+                    if (req.photoFile) {
+                        photoPath = await DB.uploadFile(req.photoFile, 'customer-photos', 'photos', `${ts}_photo.jpg`);
+                    }
+
+                    // 3. Build & insert rental record
+                    const refId = 'JTP-' + ts.toString().slice(-6);
+                    const rentalRecord = {
+                        id: refId,
+                        powerBankId: req.powerBankId,
+                        status: 'PENDING_VERIFICATION',
+                        amount: 500,
+                        timestamp: new Date().toISOString(),
+                        customer: req.customer,
+                        photoPath,
+                        receiptPath,
+                    };
+
+                    const rentalOk = await DB.createRental(rentalRecord);
+
+                    if (!rentalOk) throw new Error('Failed to write rental to Supabase.');
+
+                    // 4. Cache for the confirmation page
+                    Storage.set('completed_rental_request', rentalRecord);
+                    Storage.set('current_rental_request', null);
+
                     showToast('Rental request submitted successfully.');
                     window.location.href = 'confirmation.html';
-                }, 1000);
+
+                } catch (err) {
+                    console.error('[Payment] Submission failed:', err);
+                    showToast('Submission failed. Please check your connection and try again.', 'error');
+                    submitBtn.innerHTML = 'SUBMIT RENTAL REQUEST';
+                    submitBtn.disabled = false;
+                }
             });
         });
     </script>

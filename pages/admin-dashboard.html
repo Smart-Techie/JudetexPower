@@ -152,6 +152,12 @@
                 <a href="admin-dashboard.html" class="logo" style="color: white; font-size: 20px;">JUDETEX<span
                         style="color: var(--accent);">POWER</span></a>
             </div>
+            <div style="padding: 0 24px 16px 24px;">
+                <button class="btn btn-primary" id="btnRegisterSidebar"
+                    style="width:100%; background:var(--accent); border:none; box-shadow: 0 4px 10px rgba(255, 126, 103, 0.3); font-size: 14px; font-weight: 700;">
+                    + REGISTER CUSTOMER
+                </button>
+            </div>
             <nav class="sidebar-nav">
                 <a href="#" class="sidebar-link active" data-view="dashboard">Dashboard</a>
                 <a href="#" class="sidebar-link" data-view="requests">Rental Requests</a>
@@ -188,34 +194,166 @@
 
             <div class="content-area">
 
+                <!-- ADMIN REGISTER CUSTOMER VIEW -->
+                <div id="view-register" class="view-section">
+                    <div id="register_step1">
+                        <div class="card mb-4" style="padding: 16px;">
+                            <h3 style="font-size: 16px; margin-bottom: 20px;">1. SELECT POWER BANK</h3>
+                            <div id="reg_pb_grid" class="grid grid-cols-2 gap-2"
+                                style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
+                                <!-- Populated dynamically with JS -->
+                            </div>
+                        </div>
+
+                        <div class="card mb-4" id="reg_details_card"
+                            style="display:none; pointer-events:none; opacity:0.5; padding: 16px;">
+                            <h3 style="font-size: 16px; margin-bottom: 20px;">2. CUSTOMER DETAILS</h3>
+                            <div class="form-group">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" id="reg_name" class="form-control" placeholder="e.g. John Doe">
+                            </div>
+                            <div class="form-group mt-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" id="reg_phone" class="form-control" placeholder="e.g. 080...">
+                            </div>
+                            <div class="form-group mt-3">
+                                <label class="form-label">Market Line / Shop Name</label>
+                                <input type="text" id="reg_line" class="form-control" placeholder="e.g. Line 4 Shop B2">
+                            </div>
+
+                            <div class="form-group mt-4">
+                                <label class="form-label">Customer Photo (Identity Verification)</label>
+                                <div id="reg_photo_preview"
+                                    style="height:150px; background:#f5f7fa; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; overflow:hidden;">
+                                    <span class="text-light" id="reg_photo_text">No photo captured</span>
+                                    <img id="reg_photo_img" src=""
+                                        style="width:100%; height:100%; object-fit:cover; display:none;">
+                                </div>
+                                <input type="file" id="reg_photo_input" accept="image/*" capture="environment"
+                                    style="display:none;">
+                                <button class="btn btn-outline" style="width:100%;"
+                                    onclick="document.getElementById('reg_photo_input').click()">
+                                    📷 CAPTURE / UPLOAD PHOTO
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card mb-4" id="reg_payment_card"
+                            style="display:none; pointer-events:none; opacity:0.5; padding: 16px;">
+                            <h3 style="font-size: 16px; margin-bottom: 20px;">3. PAYMENT METHOD</h3>
+                            <div class="flex flex-col gap-3">
+                                <label class="flex items-center gap-3 p-3"
+                                    style="border:1px solid var(--border); border-radius:8px; cursor:pointer;"
+                                    id="label_pay_cash">
+                                    <input type="radio" name="reg_payment_method" value="CASH">
+                                    <div>
+                                        <div style="font-weight:700;">CASH (₦500)</div>
+                                        <div style="font-size:12px; color:var(--text-light);">Receipt NOT required.
+                                            Bypassed by Admin.</div>
+                                    </div>
+                                </label>
+                                <label class="flex items-center gap-3 p-3"
+                                    style="border:1px solid var(--border); border-radius:8px; cursor:pointer;"
+                                    id="label_pay_transfer">
+                                    <input type="radio" name="reg_payment_method" value="TRANSFER">
+                                    <div>
+                                        <div style="font-weight:700;">BANK TRANSFER (₦500)</div>
+                                        <div style="font-size:12px; color:var(--text-light);">Optional receipt upload.
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div id="reg_transfer_receipt_sect" style="display:none; margin-top:15px;">
+                                <label class="form-label">Transfer Receipt (Optional)</label>
+                                <input type="file" id="reg_receipt_input" accept="image/*" class="form-control">
+                            </div>
+
+                            <button class="btn btn-primary mt-4" style="width:100%;" id="reg_btn_review">REVIEW RENTAL
+                                ➔</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: REVIEW -->
+                    <div id="register_step2" style="display:none;">
+                        <div class="card mb-4 p-4">
+                            <h2 class="mb-4 text-center" style="color:var(--accent);">NEW RENTAL SUMMARY</h2>
+
+                            <div
+                                style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-bottom:20px;">
+                                <h3 style="font-size:14px; color:var(--text-light); margin-bottom:10px;">CUSTOMER</h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p><strong>Name:</strong> <span id="rev_name"></span></p>
+                                        <p><strong>Phone:</strong> <span id="rev_phone"></span></p>
+                                        <p><strong>Market Line:</strong> <span id="rev_line"></span></p>
+                                    </div>
+                                    <div>
+                                        <div
+                                            style="height:100px; width:100px; background:#e0e0e0; border-radius:8px; overflow:hidden;">
+                                            <img id="rev_photo" src=""
+                                                style="width:100%; height:100%; object-fit:cover;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                style="background:var(--bg-secondary); padding:20px; border-radius:8px; margin-bottom:20px;">
+                                <h3 style="font-size:14px; color:var(--text-light); margin-bottom:10px;">POWER BANK &
+                                    PAYMENT</h3>
+                                <p><strong>Power Bank:</strong> <span id="rev_pb"
+                                        style="color:var(--primary); font-weight:700;"></span></p>
+                                <p><strong>Amount:</strong> ₦500</p>
+                                <p><strong>Method:</strong> <span id="rev_pay_method"></span></p>
+                                <p><strong>Payment Status:</strong> <span
+                                        style="color:var(--success); font-weight:700;">PAID</span></p>
+                                <p id="rev_pay_receipt"
+                                    style="color:var(--accent); font-size:13px; margin-top:5px; font-weight:600;"></p>
+                            </div>
+
+                            <p class="text-center" style="font-size:12px; color:var(--text-light); margin-bottom:20px;">
+                                CREATED VIA: <strong>ADMIN</strong><br>
+                                Clicking confirm creates the rental and immediately allows Handover.
+                            </p>
+
+                            <div class="flex flex-col gap-2">
+                                <button class="btn btn-primary" id="reg_btn_confirm"
+                                    style="width:100%; height:50px;">CREATE RENTAL</button>
+                                <button class="btn btn-secondary" id="reg_btn_back"
+                                    style="width:100%; height:40px;">BACK / EDIT</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- DASHBOARD VIEW -->
                 <div id="view-dashboard" class="view-section active">
 
                     <div class="grid grid-cols-4 gap-3 mb-4" id="statsGrid">
-                        <!-- Populated by JS -->
                         <div class="stat-card">
                             <div class="stat-card-title">TOTAL POWER BANKS</div>
-                            <div class="stat-card-value">50</div>
+                            <div class="stat-card-value" id="stat_total">0</div>
                         </div>
                         <div class="stat-card" style="border-bottom: 4px solid var(--success);">
                             <div class="stat-card-title">AVAILABLE</div>
-                            <div class="stat-card-value">28</div>
+                            <div class="stat-card-value" id="stat_avail">0</div>
                         </div>
                         <div class="stat-card" style="border-bottom: 4px solid var(--primary);">
                             <div class="stat-card-title">RENTED</div>
-                            <div class="stat-card-value">18</div>
+                            <div class="stat-card-value" id="stat_rented">0</div>
                         </div>
                         <div class="stat-card" style="border-bottom: 4px solid var(--danger);">
                             <div class="stat-card-title">OVERDUE</div>
-                            <div class="stat-card-value" style="color: var(--danger);">4</div>
+                            <div class="stat-card-value" style="color: var(--danger);" id="stat_overdue">0</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-card-title">PENDING REQUESTS</div>
-                            <div class="stat-card-value" style="color: var(--accent);">3</div>
+                            <div class="stat-card-value" style="color: var(--accent);" id="stat_pending">0</div>
                         </div>
                         <div class="stat-card" style="grid-column: span 3; background: var(--primary); color: white;">
                             <div class="stat-card-title" style="color: rgba(255,255,255,0.7);">TODAY'S REVENUE</div>
-                            <div class="stat-card-value" style="color: white;">₦12,500</div>
+                            <div class="stat-card-value" style="color: white;" id="stat_revenue">₦0</div>
                         </div>
                     </div>
 
@@ -289,9 +427,32 @@
                 </div>
 
                 <!-- OTHER VIEWS PLACEHOLDERS -->
+                <!-- ACTIVE RENTALS / RETURNS VIEW -->
                 <div id="view-rentals" class="view-section">
-                    <div class="card p-5 text-center">
-                        <h3 class="text-light">Active Rentals Mockup</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex gap-2">
+                            <input type="text" class="form-control" placeholder="Search reference..."
+                                style="width: 250px;">
+                        </div>
+                    </div>
+                    <div class="card p-0">
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref ID</th>
+                                        <th>Customer</th>
+                                        <th>Power Bank</th>
+                                        <th>Cord</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activeRentalsBody">
+                                    <!-- Javascript rendered -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -303,7 +464,7 @@
 
                 <div id="view-returns" class="view-section">
                     <div class="card p-5 text-center">
-                        <h3 class="text-light">Collection & Returns UI Mockup</h3>
+                        <h3 class="text-light">Select "Active Rentals" on the sidebar to process returns.</h3>
                     </div>
                 </div>
 
@@ -320,8 +481,34 @@
                 </div>
 
                 <div id="view-history" class="view-section">
-                    <div class="card p-5 text-center">
-                        <h3 class="text-light">Rental History Mockup</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex gap-2">
+                            <input type="text" class="form-control" placeholder="Search reference..."
+                                style="width: 250px;">
+                            <select class="form-control" style="width: auto;" id="historyFilterSelect">
+                                <option value="ALL">All Sources</option>
+                                <option value="CUSTOMER">Customer Created</option>
+                                <option value="ADMIN">Admin Created</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card p-0">
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref ID</th>
+                                        <th>Power Bank</th>
+                                        <th>Customer</th>
+                                        <th>Charging Cord</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody">
+                                    <!-- Javascript rendered -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -373,11 +560,679 @@
             </div>
         </div>
 
+        <!-- Modal for Collection / Handover -->
+        <div id="collectionModal"
+            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center;">
+            <div class="card p-4 mx-2" style="width:100%; max-width:500px; padding:32px;">
+                <h2 class="mb-4">HANDOVER POWER BANK</h2>
+                <div class="mb-4" style="background:var(--bg-secondary); padding:16px; border-radius:8px;">
+                    <p><strong>Power Bank:</strong> <span id="col_pb"
+                            style="font-weight:700; color:var(--primary);"></span></p>
+                    <p><strong>Customer:</strong> <span id="col_name"></span></p>
+                    <p><strong>Phone:</strong> <span id="col_phone"></span></p>
+                    <p><strong>Line:</strong> <span id="col_line"></span></p>
+                    <p><strong>Payment:</strong> <span style="color:var(--success); font-weight:700;">VERIFIED</span>
+                    </p>
+                </div>
+
+                <h3 class="mb-3" style="font-size:16px;">ACCESSORIES</h3>
+                <div class="mb-4">
+                    <label class="form-label">Charging Cord</label>
+                    <div class="flex gap-3">
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="radio" name="col_cord" value="false" checked> Not Provided
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="radio" name="col_cord" value="true"> Provided
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" id="col_confirmBtn" style="flex:1;">CONFIRM HANDOVER</button>
+                    <button class="btn btn-secondary" id="col_closeBtn">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Return -->
+        <div id="returnModal"
+            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; align-items:flex-start; justify-content:center; padding-top:40px; overflow-y:auto;">
+            <div class="card p-4 mx-2" style="width:100%; max-width:500px; padding:32px; margin-bottom:40px;">
+                <h2 class="mb-4">RETURN CHECKLIST</h2>
+
+                <div class="mb-4" style="background:var(--bg-secondary); padding:16px; border-radius:8px;">
+                    <p><strong>Customer:</strong> <span id="ret_name"></span></p>
+                    <p><strong>Power Bank:</strong> <span id="ret_pb" style="font-weight:700;"></span></p>
+                    <p><strong>Cord Given?</strong> <span id="ret_cord_given" style="font-weight:700;"></span></p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label" style="font-size:16px; color:var(--text-dark);">Power Bank Status</label>
+                    <label class="flex items-center gap-2 mb-2" style="cursor:pointer;">
+                        <input type="checkbox" id="ret_pb_returned" checked> Returned
+                    </label>
+                    <div id="ret_pb_cond_wrap">
+                        <label class="form-label mt-2" style="font-size:12px;">Power Bank Condition</label>
+                        <select id="ret_pb_condition" class="form-control">
+                            <option value="GOOD">GOOD</option>
+                            <option value="MINOR DAMAGE">MINOR DAMAGE</option>
+                            <option value="DAMAGED">DAMAGED</option>
+                            <option value="NOT WORKING">NOT WORKING</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4" id="ret_cord_section">
+                    <label class="form-label" style="font-size:16px; color:var(--text-dark);">Charging Cord
+                        Status</label>
+                    <div class="flex flex-col gap-2 mb-2">
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="radio" name="ret_cord_status" value="RETURNED"> Returned
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="radio" name="ret_cord_status" value="NOT RETURNED"> Not Returned
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="radio" name="ret_cord_status" value="NOT PROVIDED"> Not Provided
+                        </label>
+                    </div>
+
+                    <div id="ret_cord_cond_wrap" style="display:none;">
+                        <label class="form-label mt-2" style="font-size:12px;">Charging Cord Condition</label>
+                        <select id="ret_cord_condition" class="form-control">
+                            <option value="GOOD">GOOD</option>
+                            <option value="DAMAGED">DAMAGED</option>
+                            <option value="NOT_RETURNED">NOT_RETURNED</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 mt-4">
+                    <button class="btn btn-primary" id="ret_confirmBtn" style="flex:1;">PROCESS RETURN</button>
+                    <button class="btn btn-secondary" id="ret_closeBtn">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script src="../js/utils.js"></script>
-    <script src="../js/mock-data.js"></script>
-    <script src="../js/admin.js"></script>
+    <!-- Supabase DB module — sets window.SupabaseDB -->
+    <script type="module" src="../js/db.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { showToast } = window.JudetexUtils;
+
+            // Wait for DB module
+            const waitForDB = () => new Promise(resolve => {
+                if (window.SupabaseDB) return resolve();
+                const t = setInterval(() => { if (window.SupabaseDB) { clearInterval(t); resolve(); } }, 50);
+            });
+            await waitForDB();
+
+            const DB = window.SupabaseDB;
+
+            // ── Auth guard ──────────────────────────────────────────────
+            const session = await DB.getAdminSession();
+            if (!session) {
+                window.location.href = 'admin-login.html';
+                return;
+            }
+
+            // ── Logout ──────────────────────────────────────────────────
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                await DB.adminSignOut();
+                window.location.href = 'admin-login.html';
+            });
+
+            // ── Sidebar toggle ──────────────────────────────────────────
+            const sidebar = document.getElementById('sidebar');
+            document.getElementById('sidebarToggle').addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            // ── Admin Register Customer Routing ─────────────────────────
+            document.getElementById('btnRegisterSidebar').addEventListener('click', () => {
+                links.forEach(l => l.classList.remove('active'));
+                views.forEach(view => view.classList.remove('active'));
+                document.getElementById('view-register').classList.add('active');
+                pageTitle.innerText = "Register Customer";
+                if (window.innerWidth <= 1024) sidebar.classList.remove('open');
+
+                loadRegistrationPowerBanks();
+                document.getElementById('register_step1').style.display = 'block';
+                document.getElementById('register_step2').style.display = 'none';
+                resetRegistrationForm();
+            });
+
+            // ── View routing ────────────────────────────────────────────
+            const links = document.querySelectorAll('.sidebar-link[data-view]');
+            const views = document.querySelectorAll('.view-section');
+            const pageTitle = document.getElementById('pageTitle');
+
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    links.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+
+                    const v = link.getAttribute('data-view');
+                    views.forEach(view => view.classList.remove('active'));
+                    document.getElementById(`view-${v}`).classList.add('active');
+                    pageTitle.innerText = link.innerText.trim();
+
+                    if (window.innerWidth <= 1024) sidebar.classList.remove('open');
+
+                    if (v === 'requests') loadRequests();
+                    if (v === 'dashboard') { loadDashboard(); loadRequests(); }
+                    if (v === 'rentals' || v === 'returns') loadRentals();
+                    if (v === 'history') loadHistory();
+                });
+            });
+
+            // ── Badge helper ────────────────────────────────────────────
+            const getBadgeClass = (status) => {
+                if (status === 'AWAITING VERIFICATION') return 'badge-warning';
+                if (status === 'PAYMENT VERIFIED' || status === 'READY FOR COLLECTION') return 'badge-success';
+                if (status === 'COLLECTED') return 'badge-primary';
+                if (status === 'OVERDUE' || status === 'REJECTED') return 'badge-danger';
+                return 'badge-primary';
+            };
+
+            // ── Dashboard ────────────────────────────────────────────────
+            const loadDashboard = async () => {
+                const { requests, rentals } = await DB.getAdminDashboardData();
+                const pbs = await DB.getPowerBanks();
+
+                // Set stats
+                document.getElementById('stat_total').innerText = pbs.length;
+                document.getElementById('stat_avail').innerText = pbs.filter(p => p.status === 'AVAILABLE').length;
+                document.getElementById('stat_rented').innerText = pbs.filter(p => p.status === 'RENTED' || p.status === 'RESERVED').length;
+                document.getElementById('stat_overdue').innerText = rentals.filter(r => r.status === 'OVERDUE').length;
+                document.getElementById('stat_pending').innerText = requests.filter(r => r.status === 'PENDING_VERIFICATION' || r.status === 'PAYMENT_VERIFIED').length;
+
+                // Today's revenue
+                let rev = 0;
+                const today = new Date().toISOString().slice(0, 10);
+                rentals.filter(r => r.timestamp && r.timestamp.startsWith(today)).forEach(r => rev += r.amount || 0);
+                requests.filter(r => r.timestamp && r.timestamp.startsWith(today)).forEach(r => rev += r.amount || 0);
+
+                document.getElementById('stat_revenue').innerText = '₦' + rev.toLocaleString();
+
+                // Recent Activity
+                const recent = [...requests, ...rentals].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5);
+                const tbody = document.getElementById('recentRequestsBody');
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+                if (recent.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-light">No recent activity</td></tr>`;
+                    return;
+                }
+
+                recent.forEach(r => {
+                    tbody.innerHTML += `
+                    <tr>
+                        <td><span style="font-weight:600;font-size:14px;">${r.id}</span></td>
+                        <td style="font-weight:600;">${r.powerBankId}</td>
+                        <td><span class="badge ${getBadgeClass(r.status)}">${r.status.replace(/_/g, ' ')}</span></td>
+                    </tr>`;
+                });
+            };
+
+            // ── Modals Setup ─────────────────────────────────────────────
+            let currentReq = null;
+
+            const verifyModal = document.getElementById('verificationModal');
+            document.getElementById('modal_closeBtn').addEventListener('click', () => { verifyModal.style.display = 'none'; });
+
+            const collectionModal = document.getElementById('collectionModal');
+            document.getElementById('col_closeBtn').addEventListener('click', () => { collectionModal.style.display = 'none'; });
+
+            const returnModal = document.getElementById('returnModal');
+            document.getElementById('ret_closeBtn').addEventListener('click', () => { returnModal.style.display = 'none'; });
+
+            // ── Verification Modal (Payment) ──────────────────────────────
+            window.verifyRequest = async (id) => {
+                const rentals = await DB.getRentals();
+                const req = rentals.find(r => r.id === id);
+                if (!req) return;
+                currentReq = req;
+
+                document.getElementById('modal_name').innerText = req.customer.name;
+                document.getElementById('modal_phone').innerText = req.customer.phone;
+                document.getElementById('modal_line').innerText = req.customer.marketLine;
+                document.getElementById('modal_pb').innerText = req.powerBankId;
+
+                const cPhoto = document.getElementById('modal_customerPhoto');
+                const noPhoto = document.getElementById('modal_noPhoto');
+                if (req.photoPath) {
+                    cPhoto.src = await DB.getSignedUrl('customer-photos', req.photoPath) || req.photoPath;
+                    cPhoto.style.display = 'block';
+                    noPhoto.style.display = 'none';
+                } else {
+                    cPhoto.style.display = 'none';
+                    noPhoto.style.display = 'block';
+                }
+
+                const rImg = document.getElementById('modal_receipt');
+                const noReceipt = document.getElementById('modal_noReceipt');
+                if (req.receiptPath) {
+                    rImg.src = await DB.getSignedUrl('payment-receipts', req.receiptPath) || req.receiptPath;
+                    rImg.style.display = 'block';
+                    noReceipt.style.display = 'none';
+                } else {
+                    rImg.style.display = 'none';
+                    noReceipt.style.display = 'block';
+                    noReceipt.innerText = 'No receipt';
+                }
+
+                verifyModal.style.display = 'flex';
+            };
+
+            document.getElementById('modal_approveBtn').addEventListener('click', async () => {
+                if (!currentReq) return;
+                await DB.verifyPayment(currentReq.internalId, true);
+                verifyModal.style.display = 'none';
+                await loadRequests();
+                await loadDashboard();
+                showToast('Payment verified. Ready for collection.');
+            });
+
+            document.getElementById('modal_rejectBtn').addEventListener('click', async () => {
+                if (!currentReq) return;
+                await DB.verifyPayment(currentReq.internalId, false);
+                verifyModal.style.display = 'none';
+                await loadRequests();
+                await loadDashboard();
+                showToast('Request rejected.', 'error');
+            });
+
+            // ── Collection / Handover Modal ───────────────────────────────
+            window.openCollectionModal = async (id) => {
+                const rentals = await DB.getRentals();
+                const req = rentals.find(r => r.id === id);
+                if (!req) return;
+                currentReq = req;
+
+                document.getElementById('col_pb').innerText = req.powerBankId;
+                document.getElementById('col_name').innerText = req.customer.name;
+                document.getElementById('col_phone').innerText = req.customer.phone;
+                document.getElementById('col_line').innerText = req.customer.marketLine;
+
+                // Reset radios to default (Not Provided)
+                document.querySelector('input[name="col_cord"][value="false"]').checked = true;
+
+                collectionModal.style.display = 'flex';
+            };
+
+            document.getElementById('col_confirmBtn').addEventListener('click', async () => {
+                if (!currentReq) return;
+                const isProvided = document.querySelector('input[name="col_cord"]:checked').value === "true";
+
+                const success = await DB.confirmCollection(currentReq.internalId, isProvided);
+                if (!success) {
+                    showToast('Failed to process handover.', 'error');
+                    return;
+                }
+
+                collectionModal.style.display = 'none';
+                await loadRequests();
+                await loadDashboard();
+                if (document.getElementById('view-rentals').classList.contains('active')) loadRentals();
+                showToast('Power bank handed over.');
+            });
+
+            // ── Return Modal ──────────────────────────────────────────────
+            const retCordRadios = document.querySelectorAll('input[name="ret_cord_status"]');
+            const retCordCondWrap = document.getElementById('ret_cord_cond_wrap');
+
+            retCordRadios.forEach(r => {
+                r.addEventListener('change', (e) => {
+                    retCordCondWrap.style.display = (e.target.value === 'RETURNED') ? 'block' : 'none';
+                });
+            });
+
+            window.openReturnModal = async (id) => {
+                const rentals = await DB.getRentals();
+                const req = rentals.find(r => r.id === id);
+                if (!req) return;
+                currentReq = req;
+
+                document.getElementById('ret_pb').innerText = req.powerBankId;
+                document.getElementById('ret_name').innerText = req.customer.name;
+
+                document.getElementById('ret_pb_returned').checked = true;
+                document.getElementById('ret_pb_condition').value = 'GOOD';
+
+                if (req.chargingCordProvided) {
+                    document.getElementById('ret_cord_given').innerText = "Yes";
+                    document.querySelector('input[name="ret_cord_status"][value="RETURNED"]').checked = true;
+                    retCordCondWrap.style.display = 'block';
+                    document.getElementById('ret_cord_condition').value = 'GOOD';
+                } else {
+                    document.getElementById('ret_cord_given').innerText = "No";
+                    document.querySelector('input[name="ret_cord_status"][value="NOT PROVIDED"]').checked = true;
+                    retCordCondWrap.style.display = 'none';
+                    document.getElementById('ret_cord_condition').value = 'GOOD';
+                }
+
+                returnModal.style.display = 'flex';
+            };
+
+            document.getElementById('ret_confirmBtn').addEventListener('click', async () => {
+                if (!currentReq) return;
+
+                const pbCondition = document.getElementById('ret_pb_condition').value;
+                const cordStatus = document.querySelector('input[name="ret_cord_status"]:checked').value;
+                const cordCondition = document.getElementById('ret_cord_condition').value;
+
+                const cordReturned = (cordStatus === 'RETURNED');
+                const finalCordCondition = (cordStatus === 'RETURNED') ? cordCondition : (cordStatus === 'NOT RETURNED' ? 'NOT_RETURNED' : 'NOT_PROVIDED');
+
+                const success = await DB.processReturn(currentReq.internalId, pbCondition, cordReturned, finalCordCondition);
+                if (!success) {
+                    showToast('Failed to process return.', 'error');
+                    return;
+                }
+
+                returnModal.style.display = 'none';
+                await loadRentals();
+                await loadDashboard();
+                showToast('Return processed successfully.');
+            });
+
+            // ── Requests Table (Pending/Ready) ───────────────────────────
+            const loadRequests = async () => {
+                const rentals = await DB.getRentals();
+                const tbody = document.getElementById('requestsTableBody');
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+                const visible = rentals.filter(r => r.status.includes('AWAITING') || r.status.includes('READY'));
+
+                if (visible.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:40px;color:var(--text-light);">No pending requests found.</td></tr>`;
+                    return;
+                }
+
+                visible.forEach(r => {
+                    let actionBtn = `<button class="btn btn-outline" style="padding:6px 12px;font-size:12px;" onclick="verifyRequest('${r.id}')">VERIFY</button>`;
+                    if (r.status === 'READY FOR COLLECTION') {
+                        actionBtn = `<button class="btn btn-primary" style="padding:6px 12px;font-size:12px;" onclick="openCollectionModal('${r.id}')">HANDOVER</button>`;
+                    }
+
+                    tbody.innerHTML += `
+                    <tr>
+                        <td><span style="font-weight:700;color:var(--primary);">${r.id}</span></td>
+                        <td>
+                            <div style="font-weight:600;">${r.customer.name}</div>
+                            <div style="font-size:12px;color:var(--text-light);">${r.customer.phone}</div>
+                        </td>
+                        <td style="font-weight:600;">${r.powerBankId}</td>
+                        <td>&#8358;${r.amount}</td>
+                        <td><span class="badge ${getBadgeClass(r.status)}">${r.status}</span></td>
+                        <td>${actionBtn}</td>
+                    </tr>`;
+                });
+            };
+
+            // ── Active Rentals Table (Collected/Overdue) ───────────────
+            const loadRentals = async () => {
+                const rentals = await DB.getRentals();
+                const tbody = document.getElementById('activeRentalsBody');
+                if (!tbody) return;
+
+                tbody.innerHTML = '';
+                const visible = rentals.filter(r => r.status === 'COLLECTED' || r.status === 'OVERDUE');
+
+                if (visible.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:40px;color:var(--text-light);">No active rentals found.</td></tr>`;
+                    return;
+                }
+
+                visible.forEach(r => {
+                    const cordStr = r.chargingCordProvided ? `<span class="badge badge-primary" style="background:#EBF1FA;color:var(--primary);">Provided</span>` : `<span style="font-size:12px;color:var(--text-light);">None</span>`;
+
+                    tbody.innerHTML += `
+                    <tr>
+                        <td><span style="font-weight:700;color:var(--primary);">${r.id}</span></td>
+                        <td>
+                            <div style="font-weight:600;">${r.customer.name}</div>
+                            <div style="font-size:12px;color:var(--text-light);">${r.customer.phone}</div>
+                        </td>
+                        <td style="font-weight:600;">${r.powerBankId}</td>
+                        <td>${cordStr}</td>
+                        <td><span class="badge ${getBadgeClass(r.status)}">${r.status}</span></td>
+                        <td><button class="btn btn-primary" style="padding:6px 12px;font-size:12px;" onclick="openReturnModal('${r.id}')">RETURN</button></td>
+                    </tr>`;
+                });
+            };
+
+            // ── Rental History Table ─────────────────────────────────────
+            document.getElementById('historyFilterSelect').addEventListener('change', () => loadHistory());
+
+            const loadHistory = async () => {
+                const rentals = await DB.getRentals();
+                const tbody = document.getElementById('historyTableBody');
+                if (!tbody) return;
+
+                const filterVal = document.getElementById('historyFilterSelect').value;
+                tbody.innerHTML = '';
+                const visible = rentals.filter(r => {
+                    if (r.status !== 'RETURNED' && r.status !== 'REJECTED') return false;
+                    if (filterVal === 'ALL') return true;
+                    return r.creationSource === filterVal;
+                });
+
+                if (visible.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:40px;color:var(--text-light);">No rental history found.</td></tr>`;
+                    return;
+                }
+
+                visible.forEach(r => {
+                    let cordStr = `<span style="color:var(--text-light);">Not Provided</span>`;
+                    if (r.chargingCordProvided) {
+                        if (r.chargingCordReturned) cordStr = `<span style="color:var(--success);font-weight:600;">Returned</span>`;
+                        else cordStr = `<span style="color:var(--danger);font-weight:600;">Not Returned</span>`;
+                        cordStr = `Provided <br><span style="font-size:11px;">Status: ${cordStr}</span>`;
+                    }
+
+                    tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <span style="font-weight:700;color:var(--primary);">${r.id}</span><br>
+                            <span style="font-size:10px; color:var(--text-light);">Via: ${r.creationSource || 'CUSTOMER'}</span>
+                        </td>
+                        <td style="font-weight:600;">${r.powerBankId}</td>
+                        <td>${r.customer.name}</td>
+                        <td>${cordStr}</td>
+                        <td><span class="badge ${getBadgeClass(r.status)}">${r.status}</span></td>
+                    </tr>`;
+                });
+            };
+
+            // ── Admin Register Form Logic ─────────────────────────────────
+            let regSelectedPb = null, regPhotoFile = null, regReceiptFile = null;
+
+            window.resetRegistrationForm = () => {
+                regSelectedPb = null; regPhotoFile = null; regReceiptFile = null;
+                document.getElementById('reg_name').value = '';
+                document.getElementById('reg_phone').value = '';
+                document.getElementById('reg_line').value = '';
+                document.getElementById('reg_details_card').style.pointerEvents = 'none';
+                document.getElementById('reg_details_card').style.opacity = '0.5';
+                document.getElementById('reg_payment_card').style.pointerEvents = 'none';
+                document.getElementById('reg_payment_card').style.opacity = '0.5';
+                document.getElementById('reg_photo_input').value = '';
+                document.getElementById('reg_photo_img').style.display = 'none';
+                document.getElementById('reg_photo_img').src = '';
+                document.getElementById('reg_photo_text').style.display = 'block';
+                document.getElementById('reg_receipt_input').value = '';
+                document.querySelector('input[name="reg_payment_method"][value="CASH"]').checked = true;
+                document.getElementById('reg_transfer_receipt_sect').style.display = 'none';
+            };
+
+            window.loadRegistrationPowerBanks = async () => {
+                const pbs = await DB.getPowerBanks('AVAILABLE');
+                const grid = document.getElementById('reg_pb_grid');
+                grid.innerHTML = '';
+                if (pbs.length === 0) {
+                    grid.innerHTML = `<p class="text-light" style="grid-column: 1 / -1;">No power banks available.</p>`;
+                    return;
+                }
+                pbs.forEach(pb => {
+                    grid.innerHTML += `
+                        <div class="card p-3 text-center pb-select-card" data-pbid="${pb.id}" style="cursor:pointer; border:2px solid var(--border); transition:all 0.2s; box-shadow:none;">
+                            <div style="font-weight:700; font-size:16px;">${pb.id}</div>
+                            <div style="font-size:11px; color:var(--success);">AVAILABLE</div>
+                        </div>
+                    `;
+                });
+
+                document.querySelectorAll('.pb-select-card').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        document.querySelectorAll('.pb-select-card').forEach(c => c.style.borderColor = 'var(--border)');
+                        e.currentTarget.style.borderColor = 'var(--accent)';
+                        regSelectedPb = e.currentTarget.getAttribute('data-pbid');
+
+                        document.getElementById('reg_details_card').style.pointerEvents = 'auto';
+                        document.getElementById('reg_details_card').style.opacity = '1';
+                        document.getElementById('reg_payment_card').style.pointerEvents = 'auto';
+                        document.getElementById('reg_payment_card').style.opacity = '1';
+                    });
+                });
+            };
+
+            document.getElementById('reg_photo_input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    regPhotoFile = file;
+                    const rdr = new FileReader(); rdr.onload = ev => {
+                        document.getElementById('reg_photo_img').src = ev.target.result;
+                        document.getElementById('reg_photo_img').style.display = 'block';
+                        document.getElementById('reg_photo_text').style.display = 'none';
+                    }; rdr.readAsDataURL(file);
+                }
+            });
+
+            document.querySelectorAll('input[name="reg_payment_method"]').forEach(el => {
+                el.addEventListener('change', (e) => {
+                    document.getElementById('reg_transfer_receipt_sect').style.display =
+                        (e.target.value === 'TRANSFER') ? 'block' : 'none';
+                });
+            });
+
+            document.getElementById('reg_btn_review').addEventListener('click', () => {
+                const name = document.getElementById('reg_name').value.trim();
+                const phone = document.getElementById('reg_phone').value.trim();
+                const line = document.getElementById('reg_line').value.trim();
+
+                if (!regSelectedPb) return showToast('Please select a Power Bank', 'error');
+                if (!name || !phone || !line) return showToast('Please fill all customer details', 'error');
+                if (!regPhotoFile) return showToast('Customer photo is required for verification', 'error');
+
+                const method = document.querySelector('input[name="reg_payment_method"]:checked').value;
+                if (method === 'TRANSFER') {
+                    const rInput = document.getElementById('reg_receipt_input');
+                    regReceiptFile = rInput.files ? rInput.files[0] : null;
+                } else {
+                    regReceiptFile = null;
+                }
+
+                document.getElementById('rev_pb').innerText = regSelectedPb;
+                document.getElementById('rev_name').innerText = name;
+                document.getElementById('rev_phone').innerText = phone;
+                document.getElementById('rev_line').innerText = line;
+                document.getElementById('rev_photo').src = document.getElementById('reg_photo_img').src;
+                document.getElementById('rev_pay_method').innerText = method;
+
+                if (method === 'CASH') {
+                    document.getElementById('rev_pay_receipt').innerText = 'Receipt: Not Required (Bypassed by Admin)';
+                } else {
+                    document.getElementById('rev_pay_receipt').innerText = regReceiptFile ? 'Receipt: Uploaded' : 'Receipt: Not Uploaded (Optional)';
+                }
+
+                document.getElementById('register_step1').style.display = 'none';
+                document.getElementById('register_step2').style.display = 'block';
+            });
+
+            document.getElementById('reg_btn_back').addEventListener('click', () => {
+                document.getElementById('register_step2').style.display = 'none';
+                document.getElementById('register_step1').style.display = 'block';
+            });
+
+            document.getElementById('reg_btn_confirm').addEventListener('click', async () => {
+                const btn = document.getElementById('reg_btn_confirm');
+                btn.disabled = true;
+                btn.innerText = 'Creating...';
+
+                const method = document.querySelector('input[name="reg_payment_method"]:checked').value;
+                const reqId = 'JTP-' + Date.now().toString().slice(-6);
+
+                let photoPath = null, receiptPath = null;
+
+                if (regPhotoFile) photoPath = await DB.uploadFile(regPhotoFile, 'customer-photos', 'photos', `${reqId}_photo.jpg`);
+                if (regReceiptFile) receiptPath = await DB.uploadFile(regReceiptFile, 'payment-receipts', 'receipts', `${reqId}_receipt.jpg`);
+
+                if (!photoPath) {
+                    showToast('Photo upload failed. Try again.', 'error');
+                    btn.disabled = false;
+                    btn.innerText = 'CREATE RENTAL';
+                    return;
+                }
+
+                const payload = {
+                    id: reqId,
+                    powerBankId: regSelectedPb,
+                    status: 'READY_FOR_COLLECTION',
+                    amount: 500,
+                    timestamp: new Date().toISOString(),
+                    customer: {
+                        name: document.getElementById('rev_name').innerText,
+                        phone: document.getElementById('rev_phone').innerText,
+                        marketLine: document.getElementById('rev_line').innerText
+                    },
+                    photoPath,
+                    receiptPath,
+                    paymentMethod: method,
+                    receiptBypassed: method === 'CASH',
+                    creationSource: 'ADMIN',
+                    createdBy: 'admin-dashboard'
+                };
+
+                const created = await DB.createRental(payload);
+                if (created) {
+
+                    showToast('Rental Created. Handing over...', 'success');
+
+                    setTimeout(() => {
+                        window.openCollectionModal(reqId);
+
+                        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+                        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+                        document.getElementById('view-rentals').classList.add('active');
+                        document.querySelector('[data-view="rentals"]').classList.add('active');
+                        document.getElementById('pageTitle').innerText = "Active Rentals";
+                        loadRentals();
+
+                        btn.disabled = false;
+                        btn.innerText = 'CREATE RENTAL';
+                    }, 500);
+
+                } else {
+                    showToast('Failed to create rental', 'error');
+                    btn.disabled = false;
+                    btn.innerText = 'CREATE RENTAL';
+                }
+            });
+
+            // ── Init ─────────────────────────────────────────────────────
+            await loadDashboard();
+            await loadRequests();
+        });
+    </script>
 </body>
 
 </html>
