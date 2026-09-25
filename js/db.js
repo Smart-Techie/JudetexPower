@@ -13,22 +13,38 @@ async function adminSignIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { success: false, error: error.message };
 
-    // Check role in profiles
     const session = data.session;
+
+    // Fetch profile — if RLS blocks this we need to know precisely why
     const { data: profile, error: profError } = await supabase
         .from('profiles')
-        .select('role, is_active')
+        .select('role, is_active, full_name, email')
         .eq('id', session.user.id)
         .single();
 
-    if (profError || !profile || !profile.is_active) {
+    // Log to console for diagnosis
+    console.log('[adminSignIn] session.user.id:', session.user.id);
+    console.log('[adminSignIn] profile:', profile);
+    console.log('[adminSignIn] profError:', profError);
+
+    if (profError) {
         await supabase.auth.signOut();
-        return { success: false, error: 'Your account is disabled or unauthorized.' };
+        return { success: false, error: `Profile lookup failed: ${profError.message} (code: ${profError.code})` };
+    }
+
+    if (!profile) {
+        await supabase.auth.signOut();
+        return { success: false, error: 'No profile found for this user. Run migration 013_force_admin.sql in the Supabase SQL Editor.' };
+    }
+
+    if (!profile.is_active) {
+        await supabase.auth.signOut();
+        return { success: false, error: `Account inactive. Role="${profile.role}", is_active=false. Run 013_force_admin.sql in SQL Editor.` };
     }
 
     if (profile.role !== 'ADMIN' && profile.role !== 'STAFF') {
         await supabase.auth.signOut();
-        return { success: false, error: 'Your account is not authorized to access this dashboard.' };
+        return { success: false, error: `Invalid role "${profile.role}". Expected ADMIN or STAFF.` };
     }
 
     return { success: true, session };
