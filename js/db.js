@@ -373,6 +373,7 @@ window.SupabaseDB = {
     adminSignIn,
     adminSignOut,
     getAdminSession,
+    getAdminProfile,
 
     // File Storage
     uploadFile,
@@ -380,8 +381,10 @@ window.SupabaseDB = {
 
     // Operations
     getPowerBanks,
-    createRental: createRentalRequest, // Mapped for legacy
+    createRental: createRentalRequest,
     getAdminDashboardData,
+    getRentals,
+    getRentalRequests,
     getPublicTrackData,
 
     // Admin workflows

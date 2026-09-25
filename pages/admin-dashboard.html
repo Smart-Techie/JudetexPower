@@ -820,8 +820,8 @@
 
             // ── Verification Modal (Payment) ──────────────────────────────
             window.verifyRequest = async (id) => {
-                const rentals = await DB.getRentals();
-                const req = rentals.find(r => r.id === id);
+                const requests = await DB.getRentalRequests();
+                const req = requests.find(r => r.id === id);
                 if (!req) return;
                 currentReq = req;
 
@@ -876,8 +876,8 @@
 
             // ── Collection / Handover Modal ───────────────────────────────
             window.openCollectionModal = async (id) => {
-                const rentals = await DB.getRentals();
-                const req = rentals.find(r => r.id === id);
+                const requests = await DB.getRentalRequests();
+                const req = requests.find(r => r.id === id);
                 if (!req) return;
                 currentReq = req;
 
@@ -970,12 +970,17 @@
 
             // ── Requests Table (Pending/Ready) ───────────────────────────
             const loadRequests = async () => {
-                const rentals = await DB.getRentals();
+                const requests = await DB.getRentalRequests();
                 const tbody = document.getElementById('requestsTableBody');
                 if (!tbody) return;
 
                 tbody.innerHTML = '';
-                const visible = rentals.filter(r => r.status.includes('AWAITING') || r.status.includes('READY'));
+                // DB statuses: PENDING_VERIFICATION, PAYMENT_VERIFIED, READY_FOR_COLLECTION
+                const visible = requests.filter(r =>
+                    r.status === 'PENDING_VERIFICATION' ||
+                    r.status === 'PAYMENT_VERIFIED' ||
+                    r.status === 'READY_FOR_COLLECTION'
+                );
 
                 if (visible.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="padding:40px;color:var(--text-light);">No pending requests found.</td></tr>`;
@@ -983,8 +988,10 @@
                 }
 
                 visible.forEach(r => {
+                    const label = r.status.replace(/_/g, ' ');
+                    // Show VERIFY for PENDING, HANDOVER for PAYMENT_VERIFIED or READY_FOR_COLLECTION
                     let actionBtn = `<button class="btn btn-outline" style="padding:6px 12px;font-size:12px;" onclick="verifyRequest('${r.id}')">VERIFY</button>`;
-                    if (r.status === 'READY FOR COLLECTION') {
+                    if (r.status === 'READY_FOR_COLLECTION' || r.status === 'PAYMENT_VERIFIED') {
                         actionBtn = `<button class="btn btn-primary" style="padding:6px 12px;font-size:12px;" onclick="openCollectionModal('${r.id}')">HANDOVER</button>`;
                     }
 
@@ -997,7 +1004,7 @@
                         </td>
                         <td style="font-weight:600;">${r.powerBankId}</td>
                         <td>&#8358;${r.amount}</td>
-                        <td><span class="badge ${getBadgeClass(r.status)}">${r.status}</span></td>
+                        <td><span class="badge ${getBadgeClass(r.status)}">${label}</span></td>
                         <td>${actionBtn}</td>
                     </tr>`;
                 });
