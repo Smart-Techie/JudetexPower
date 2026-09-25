@@ -123,6 +123,43 @@ async function updatePowerBankStatus(internalId, newStatus) {
     return !error;
 }
 
+async function addPowerBank(number, status = 'AVAILABLE', condition = 'GOOD') {
+    const { error } = await supabase.from('power_banks').insert({
+        power_bank_number: number,
+        status,
+        condition
+    });
+    if (error) { console.error('[DB] addPowerBank:', error); return false; }
+    return true;
+}
+
+async function updatePowerBank(internalId, fields) {
+    const { error } = await supabase.from('power_banks').update(fields).eq('id', internalId);
+    if (error) { console.error('[DB] updatePowerBank:', error); return false; }
+    return true;
+}
+
+async function deletePowerBank(internalId) {
+    const { error } = await supabase.from('power_banks').delete().eq('id', internalId);
+    if (error) { console.error('[DB] deletePowerBank:', error); return false; }
+    return true;
+}
+
+async function getCustomers() {
+    // Returns customers with total rental count
+    const { data, error } = await supabase
+        .from('customers')
+        .select('full_name, phone, market_line, rentals(count)')
+        .order('created_at', { ascending: false });
+    if (error) { console.error('[DB] getCustomers:', error); return []; }
+    return (data || []).map(c => ({
+        full_name: c.full_name,
+        phone: c.phone,
+        market_line: c.market_line,
+        rental_count: c.rentals?.[0]?.count ?? 0
+    }));
+}
+
 /* ─────────────────────────────────────────────────────
    CUSTOMER FLOW (PHASE 5)
 ───────────────────────────────────────────────────── */
@@ -381,10 +418,14 @@ window.SupabaseDB = {
 
     // Operations
     getPowerBanks,
+    addPowerBank,
+    updatePowerBank,
+    deletePowerBank,
     createRental: createRentalRequest,
     getAdminDashboardData,
     getRentals,
     getRentalRequests,
+    getCustomers,
     getPublicTrackData,
 
     // Admin workflows

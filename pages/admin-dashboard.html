@@ -162,8 +162,8 @@
                 <a href="#" class="sidebar-link active" data-view="dashboard">Dashboard</a>
                 <a href="#" class="sidebar-link" data-view="requests">Rental Requests</a>
                 <a href="#" class="sidebar-link" data-view="rentals">Active Rentals</a>
-                <a href="#" class="sidebar-link" data-view="overdue">Overdue <span class="badge"
-                        style="margin-left:auto; background:var(--danger); color:white;">2</span></a>
+                <a href="#" class="sidebar-link" data-view="overdue">Overdue <span id="overdueCount" class="badge"
+                        style="margin-left:auto; background:var(--danger); color:white; display:none;">0</span></a>
                 <a href="#" class="sidebar-link" data-view="returns">Returns & Collection</a>
                 <a href="#" class="sidebar-link" data-view="inventory">Power Banks</a>
                 <a href="#" class="sidebar-link" data-view="customers">Customers</a>
@@ -188,7 +188,7 @@
                     <div
                         style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
                         SA</div>
-                    <div style="font-weight: 600; font-size: 14px;">Staff Admin</div>
+                    <div style="font-weight: 600; font-size: 14px;" id="adminName">Admin</div>
                 </div>
             </header>
 
@@ -379,12 +379,15 @@
                         <div class="card">
                             <h3 class="mb-3" style="font-size: 16px;">Quick Actions</h3>
                             <div class="grid gap-2">
-                                <button class="btn btn-outline" style="justify-content: flex-start;">🔍 Verify Payment &
-                                    Collect</button>
-                                <button class="btn btn-outline" style="justify-content: flex-start;">↩️ Confirm
-                                    Return</button>
-                                <button class="btn btn-outline" style="justify-content: flex-start;">⚠️ Manage
-                                    Overdue</button>
+                                <button class="btn btn-outline" style="justify-content: flex-start;"
+                                    onclick="document.querySelector('[data-view=requests]').click()">🔍 Verify Payment
+                                    &amp; Collect</button>
+                                <button class="btn btn-outline" style="justify-content: flex-start;"
+                                    onclick="document.querySelector('[data-view=rentals]').click()">↩️ Process
+                                    Returns</button>
+                                <button class="btn btn-outline" style="justify-content: flex-start;"
+                                    onclick="document.querySelector('[data-view=inventory]').click()">📦 Manage
+                                    Inventory</button>
                             </div>
                         </div>
                     </div>
@@ -457,26 +460,81 @@
                 </div>
 
                 <div id="view-overdue" class="view-section">
-                    <div class="card p-5 text-center">
-                        <h3 class="text-light text-danger">Overdue Management Mockup</h3>
+                    <div class="card p-0">
+                        <div
+                            style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="font-size:16px;">Overdue Rentals</h3>
+                        </div>
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ref ID</th>
+                                        <th>Customer</th>
+                                        <th>Power Bank</th>
+                                        <th>Collected At</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overdueTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <div id="view-returns" class="view-section">
-                    <div class="card p-5 text-center">
-                        <h3 class="text-light">Select "Active Rentals" on the sidebar to process returns.</h3>
+                    <div class="card p-4 text-center" style="color:var(--text-light);">
+                        <p>To process a return, go to <strong>Active Rentals</strong> and click the
+                            <strong>RETURN</strong> button on any collected rental.
+                        </p>
+                        <button class="btn btn-primary mt-3"
+                            onclick="document.querySelector('[data-view=rentals]').click()">GO TO ACTIVE RENTALS
+                            →</button>
                     </div>
                 </div>
 
+                <!-- INVENTORY VIEW -->
                 <div id="view-inventory" class="view-section">
-                    <div class="card p-5 text-center">
-                        <h3 class="text-light">Power Bank Inventory Mockup</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <div></div>
+                        <button class="btn btn-primary" id="addPbBtn" style="font-size:14px;">+ ADD POWER BANK</button>
+                    </div>
+                    <div class="card p-0">
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Status</th>
+                                        <th>Condition</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
+                <!-- CUSTOMERS VIEW -->
                 <div id="view-customers" class="view-section">
-                    <div class="card p-5 text-center">
-                        <h3 class="text-light">Customers Directory Mockup</h3>
+                    <div class="card p-0">
+                        <div style="padding:16px 20px; border-bottom:1px solid var(--border);">
+                            <h3 style="font-size:16px;">Customer Directory</h3>
+                        </div>
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Market Line</th>
+                                        <th>Rentals</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customersTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -514,6 +572,43 @@
 
             </div>
         </main>
+
+        <!-- Inventory Modal (Add / Edit Power Bank) -->
+        <div id="inventoryModal"
+            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center;">
+            <div class="card p-4 mx-2" style="width:100%; max-width:440px; padding:32px;">
+                <h2 class="mb-4" id="invModal_title">ADD POWER BANK</h2>
+                <input type="hidden" id="invModal_internalId">
+                <div class="form-group mb-3">
+                    <label class="form-label">Power Bank Number (e.g. PB-007)</label>
+                    <input type="text" id="invModal_number" class="form-control" placeholder="PB-001">
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Status</label>
+                    <select id="invModal_status" class="form-control">
+                        <option value="AVAILABLE">AVAILABLE</option>
+                        <option value="MAINTENANCE">MAINTENANCE</option>
+                        <option value="RETIRED">RETIRED</option>
+                    </select>
+                </div>
+                <div class="form-group mb-4">
+                    <label class="form-label">Condition</label>
+                    <select id="invModal_condition" class="form-control">
+                        <option value="GOOD">GOOD</option>
+                        <option value="FAIR">FAIR</option>
+                        <option value="POOR">POOR</option>
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" style="flex:1;" id="invModal_saveBtn">SAVE</button>
+                    <button class="btn btn-secondary" style="flex:1;" id="invModal_cancelBtn">CANCEL</button>
+                </div>
+                <div id="invModal_deleteWrap" style="margin-top:12px; display:none;">
+                    <button class="btn btn-outline" style="width:100%; color:var(--danger); border-color:var(--danger);"
+                        id="invModal_deleteBtn">DELETE THIS POWER BANK</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Modal for Approval -->
         <div id="verificationModal"
@@ -1260,9 +1355,151 @@
                 }
             });
 
+            // ── Inventory Management ─────────────────────────────────────
+            const invModal = document.getElementById('inventoryModal');
+            let editingPbId = null;
+
+            const openInvModal = (pb = null) => {
+                editingPbId = pb ? pb.internalId : null;
+                document.getElementById('invModal_title').innerText = pb ? 'EDIT POWER BANK' : 'ADD POWER BANK';
+                document.getElementById('invModal_number').value = pb ? pb.id : '';
+                document.getElementById('invModal_number').disabled = !!pb; // Can't rename existing PB
+                document.getElementById('invModal_status').value = pb ? pb.status : 'AVAILABLE';
+                document.getElementById('invModal_condition').value = pb ? (pb.condition || 'GOOD') : 'GOOD';
+                document.getElementById('invModal_deleteWrap').style.display = pb ? 'block' : 'none';
+                invModal.style.display = 'flex';
+            };
+
+            document.getElementById('invModal_cancelBtn').addEventListener('click', () => { invModal.style.display = 'none'; });
+            document.getElementById('addPbBtn').addEventListener('click', () => openInvModal());
+
+            document.getElementById('invModal_saveBtn').addEventListener('click', async () => {
+                const number = document.getElementById('invModal_number').value.trim().toUpperCase();
+                const status = document.getElementById('invModal_status').value;
+                const condition = document.getElementById('invModal_condition').value;
+
+                if (!number) return showToast('Power bank number is required.', 'error');
+
+                if (editingPbId) {
+                    // UPDATE
+                    const ok = await DB.updatePowerBank(editingPbId, { status, condition });
+                    if (ok) { showToast('Power bank updated.'); invModal.style.display = 'none'; loadInventory(); }
+                    else showToast('Update failed.', 'error');
+                } else {
+                    // INSERT
+                    const ok = await DB.addPowerBank(number, status, condition);
+                    if (ok) { showToast('Power bank added!'); invModal.style.display = 'none'; loadInventory(); }
+                    else showToast('Failed to add. Number may already exist.', 'error');
+                }
+            });
+
+            document.getElementById('invModal_deleteBtn').addEventListener('click', async () => {
+                if (!editingPbId) return;
+                if (!confirm('Delete this power bank? This cannot be undone if it has no rental history.')) return;
+                const ok = await DB.deletePowerBank(editingPbId);
+                if (ok) { showToast('Power bank deleted.'); invModal.style.display = 'none'; loadInventory(); }
+                else showToast('Cannot delete — power bank may have rental records.', 'error');
+            });
+
+            const loadInventory = async () => {
+                const pbs = await DB.getPowerBanks();
+                const tbody = document.getElementById('inventoryTableBody');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                if (pbs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center" style="padding:40px;color:var(--text-light);">No power banks found. Add one above.</td></tr>`;
+                    return;
+                }
+                const statusColor = s => s === 'AVAILABLE' ? 'var(--success)' : s === 'RENTED' ? 'var(--primary)' : s === 'MAINTENANCE' ? 'var(--accent)' : 'var(--text-light)';
+                pbs.forEach(pb => {
+                    tbody.innerHTML += `<tr>
+                        <td><strong style="color:var(--primary);">${pb.id}</strong></td>
+                        <td><span style="color:${statusColor(pb.status)};font-weight:700;">${pb.status}</span></td>
+                        <td>${pb.condition || '—'}</td>
+                        <td>
+                            <button class="btn btn-outline" style="padding:4px 12px;font-size:12px;"
+                                onclick='openInvModalFromData(${JSON.stringify(pb)})'>EDIT</button>
+                        </td>
+                    </tr>`;
+                });
+            };
+
+            // Allow onclick to pass PB data as JSON
+            window.openInvModalFromData = (pb) => openInvModal(pb);
+
+            // ── Overdue Table ─────────────────────────────────────────────
+            const loadOverdue = async () => {
+                const rentals = await DB.getRentals();
+                const tbody = document.getElementById('overdueTableBody');
+                if (!tbody) return;
+                // Overdue = COLLECTED and collected more than 24h ago
+                const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                const overdue = rentals.filter(r => r.status === 'COLLECTED' && new Date(r.timestamp) < cutoff);
+
+                // Update sidebar badge
+                const badge = document.getElementById('overdueCount');
+                if (overdue.length > 0) {
+                    badge.innerText = overdue.length;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+
+                tbody.innerHTML = '';
+                if (overdue.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:40px;color:var(--text-light);">No overdue rentals 🎉</td></tr>`;
+                    return;
+                }
+                overdue.forEach(r => {
+                    const collectedAt = new Date(r.timestamp).toLocaleString();
+                    tbody.innerHTML += `<tr>
+                        <td><strong style="color:var(--danger);">${r.id}</strong></td>
+                        <td>
+                            <div style="font-weight:600;">${r.customer.name}</div>
+                            <div style="font-size:12px;color:var(--text-light);">${r.customer.phone}</div>
+                        </td>
+                        <td>${r.powerBankId}</td>
+                        <td style="font-size:13px;">${collectedAt}</td>
+                        <td><button class="btn btn-primary" style="padding:4px 12px;font-size:12px;" onclick="openReturnModal('${r.id}')">RETURN</button></td>
+                    </tr>`;
+                });
+            };
+
+            // ── Customers Table ───────────────────────────────────────────
+            const loadCustomers = async () => {
+                const customers = await DB.getCustomers();
+                const tbody = document.getElementById('customersTableBody');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                if (!customers || customers.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center" style="padding:40px;color:var(--text-light);">No customers yet.</td></tr>`;
+                    return;
+                }
+                customers.forEach(c => {
+                    tbody.innerHTML += `<tr>
+                        <td style="font-weight:600;">${c.full_name}</td>
+                        <td>${c.phone}</td>
+                        <td>${c.market_line || '—'}</td>
+                        <td>${c.rental_count || 0}</td>
+                    </tr>`;
+                });
+            };
+
+            // ── View Routing Hooks ────────────────────────────────────────
+            // Extend the existing routing to load data for new views
+            document.querySelectorAll('.sidebar-link[data-view]').forEach(link => {
+                link.addEventListener('click', async () => {
+                    const v = link.getAttribute('data-view');
+                    if (v === 'inventory') loadInventory();
+                    if (v === 'overdue') loadOverdue();
+                    if (v === 'customers') loadCustomers();
+                });
+            });
+
             // ── Init ─────────────────────────────────────────────────────
             await loadDashboard();
             await loadRequests();
+            await loadOverdue(); // for badge count on load
         });
     </script>
 </body>
