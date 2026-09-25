@@ -206,7 +206,7 @@
                         </div>
 
                         <div class="card mb-4" id="reg_details_card"
-                            style="display:none; pointer-events:none; opacity:0.5; padding: 16px;">
+                            style="pointer-events:none; opacity:0.5; padding: 16px;">
                             <h3 style="font-size: 16px; margin-bottom: 20px;">2. CUSTOMER DETAILS</h3>
                             <div class="form-group">
                                 <label class="form-label">Full Name</label>
@@ -239,7 +239,7 @@
                         </div>
 
                         <div class="card mb-4" id="reg_payment_card"
-                            style="display:none; pointer-events:none; opacity:0.5; padding: 16px;">
+                            style="pointer-events:none; opacity:0.5; padding: 16px;">
                             <h3 style="font-size: 16px; margin-bottom: 20px;">3. PAYMENT METHOD</h3>
                             <div class="flex flex-col gap-3">
                                 <label class="flex items-center gap-3 p-3"
@@ -1188,8 +1188,10 @@
                 document.getElementById('reg_name').value = '';
                 document.getElementById('reg_phone').value = '';
                 document.getElementById('reg_line').value = '';
+                document.getElementById('reg_details_card').style.display = 'none';
                 document.getElementById('reg_details_card').style.pointerEvents = 'none';
                 document.getElementById('reg_details_card').style.opacity = '0.5';
+                document.getElementById('reg_payment_card').style.display = 'none';
                 document.getElementById('reg_payment_card').style.pointerEvents = 'none';
                 document.getElementById('reg_payment_card').style.opacity = '0.5';
                 document.getElementById('reg_photo_input').value = '';
@@ -1224,10 +1226,15 @@
                         e.currentTarget.style.borderColor = 'var(--accent)';
                         regSelectedPb = e.currentTarget.getAttribute('data-pbid');
 
+                        document.getElementById('reg_details_card').style.display = 'block';
                         document.getElementById('reg_details_card').style.pointerEvents = 'auto';
                         document.getElementById('reg_details_card').style.opacity = '1';
+                        document.getElementById('reg_payment_card').style.display = 'block';
                         document.getElementById('reg_payment_card').style.pointerEvents = 'auto';
                         document.getElementById('reg_payment_card').style.opacity = '1';
+
+                        // Smooth scroll to customer details
+                        document.getElementById('reg_details_card').scrollIntoView({ behavior: 'smooth', block: 'start' });
                     });
                 });
             };
@@ -1258,7 +1265,11 @@
 
                 if (!regSelectedPb) return showToast('Please select a Power Bank', 'error');
                 if (!name || !phone || !line) return showToast('Please fill all customer details', 'error');
-                if (!regPhotoFile) return showToast('Customer photo is required for verification', 'error');
+                // Photo is strongly recommended but not a hard block for admin
+                if (!regPhotoFile) {
+                    const proceed = confirm('No photo captured. Proceed without customer photo? (Not recommended)');
+                    if (!proceed) return;
+                }
 
                 const method = document.querySelector('input[name="reg_payment_method"]:checked').value;
                 if (method === 'TRANSFER') {
@@ -1303,11 +1314,14 @@
                 if (regPhotoFile) photoPath = await DB.uploadFile(regPhotoFile, 'customer-photos', 'photos', `${reqId}_photo.jpg`);
                 if (regReceiptFile) receiptPath = await DB.uploadFile(regReceiptFile, 'payment-receipts', 'receipts', `${reqId}_receipt.jpg`);
 
-                if (!photoPath) {
-                    showToast('Photo upload failed. Try again.', 'error');
-                    btn.disabled = false;
-                    btn.innerText = 'CREATE RENTAL';
-                    return;
+                // Photo is optional — if upload fails we still proceed (admin can note manually)
+                if (regPhotoFile && !photoPath) {
+                    const goAhead = confirm('Photo upload failed. Continue creating rental without photo?');
+                    if (!goAhead) {
+                        btn.disabled = false;
+                        btn.innerText = 'CREATE RENTAL';
+                        return;
+                    }
                 }
 
                 const payload = {
@@ -1331,22 +1345,24 @@
 
                 const created = await DB.createRental(payload);
                 if (created) {
+                    showToast('Rental created! Opening handover...', 'success');
+                    resetRegistrationForm();
 
-                    showToast('Rental Created. Handing over...', 'success');
-
-                    setTimeout(() => {
-                        window.openCollectionModal(reqId);
-
+                    setTimeout(async () => {
+                        // Go to Requests tab — admin-created rentals land in READY_FOR_COLLECTION
                         document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-                        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
-                        document.getElementById('view-rentals').classList.add('active');
-                        document.querySelector('[data-view="rentals"]').classList.add('active');
-                        document.getElementById('pageTitle').innerText = "Active Rentals";
-                        loadRentals();
+                        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                        document.getElementById('view-requests').classList.add('active');
+                        document.querySelector('[data-view="requests"]').classList.add('active');
+                        document.getElementById('pageTitle').innerText = 'Rental Requests';
+                        await loadRequests();
+
+                        // Auto-open the handover modal for the just-created rental
+                        window.openCollectionModal(reqId);
 
                         btn.disabled = false;
                         btn.innerText = 'CREATE RENTAL';
-                    }, 500);
+                    }, 600);
 
                 } else {
                     showToast('Failed to create rental', 'error');
