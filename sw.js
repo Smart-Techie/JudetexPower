@@ -1,4 +1,4 @@
-const CACHE_NAME = 'judetex-v1';
+const CACHE_NAME = 'judetex-v2';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
