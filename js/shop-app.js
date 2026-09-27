@@ -128,7 +128,12 @@ class ShopApp {
             video.style.display = 'block';
             video.play();
 
+            
+            document.getElementById('reg_photo_img').style.display = 'none';
+            this.draftBlob = null;
+            this.draftPhotoDataUrl = null;
             document.getElementById('reg_photo_text').style.display = 'none';
+
             document.getElementById('btn_open_camera').style.display = 'none';
             captureBtn.style.display = 'block';
             captureBtn.disabled = true;
