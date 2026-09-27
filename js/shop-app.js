@@ -203,14 +203,30 @@ class ShopApp {
 
         for (let c of list) {
             let photo = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : '../assets/dummy.jpg';
+            const statusBadge = c.active_status === 'OVERDUE' ? '<span class="badge badge-danger">OVERDUE</span>'
+                : c.active_status === 'RENTED' ? '<span class="badge badge-success">RENTED</span>'
+                    : '<span class="badge" style="background:#eee;color:#666;">NO ACTIVE RENTAL</span>';
+
             grid.innerHTML += `
-                <div class="card card-clickable flex items-center gap-3" style="padding:16px;" onclick="app.showCustomerProfile('${c.id}')">
-                    <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">
-                    <div>
-                        <div style="font-weight:700; font-size:16px;">${c.full_name}</div>
-                        <div style="font-size:13px; color:var(--text-light);">${c.phone} | ${c.market_line}</div>
-                        <div style="font-size:13px; font-weight:600; color:var(--primary); margin-top:4px;">Total Rentals: ${c.rental_count}</div>
+                <div class="card card-clickable flex" style="padding:16px; flex-direction:column;" onclick="app.showCustomerProfile('${c.id}')">
+                    <div class="flex items-center gap-3 w-full mb-3">
+                        <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">
+                        <div style="flex: 1;">
+                            <div style="font-weight:700; font-size:16px;">${c.full_name}</div>
+                            <div style="font-size:13px; color:var(--text-light);">${c.phone} | ${c.market_line}</div>
+                        </div>
                     </div>
+                    <div class="flex items-center justify-between w-full" style="border-top:1px solid var(--border); padding-top:12px;">
+                        <div>
+                            <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); font-weight:700;">Status</div>
+                            ${statusBadge}
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); font-weight:700;">Previous Rentals</div>
+                            <div style="font-size:14px; font-weight:700; color:var(--primary);">${c.rental_count}</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline w-full mt-3" style="padding:6px; font-size:12px;">VIEW PROFILE / HISTORY</button>
                 </div>
             `;
         }

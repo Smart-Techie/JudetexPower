@@ -13,18 +13,27 @@ async function getAdminProfile() {
 }
 
 async function searchCustomers(query) {
-    if (!query) return [];
-    const q = query.toLowerCase();
-    const { data, error } = await supabase
+    let queryBuilder = supabase
         .from('customers')
-        .select('*, rentals(count)')
-        .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,market_line.ilike.%${q}%`)
+        .select('*, rentals(status)')
         .order('created_at', { ascending: false });
+
+    if (query) {
+        const q = query.toLowerCase();
+        queryBuilder = queryBuilder.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,market_line.ilike.%${q}%`);
+    }
+
+    const { data, error } = await queryBuilder;
     if (error) { console.error('Search error:', error); return []; }
-    return data.map(c => ({
-        ...c,
-        rental_count: c.rentals[0]?.count || 0
-    }));
+    return data.map(c => {
+        const rentals = c.rentals || [];
+        const active = rentals.find(r => r.status === 'RENTED' || r.status === 'OVERDUE');
+        return {
+            ...c,
+            rental_count: rentals.length,
+            active_status: active ? active.status : 'NONE'
+        };
+    });
 }
 
 async function getCustomerDetails(id) {
