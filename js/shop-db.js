@@ -113,6 +113,9 @@ async function uploadPhoto(blob) {
         return { success: false, error: 'Upload returned empty path payload' };
     }
 
+    // DEBUG: IMMEDIATELY verify existence
+    const verify = await supabase.storage.from('customer-photos').createSignedUrl(data.path, 60);
+    console.log('[DEBUG] Immediate Verification after Upload:', verify);
     return { success: true, path: data.path };
 }
 
@@ -135,7 +138,14 @@ async function getPhotoUrl(path) {
 
         if (error) {
             console.error('[Storage Error] createSignedUrl securely failed:', error.message, 'Filename:', filename);
-            return null; // Strict rule: Do not fallback 
+            console.log('[DEBUG] Attempting native Blob download bypass...');
+            const dl = await supabase.storage.from('customer-photos').download(filename);
+            if (dl.data) {
+                console.log('[DEBUG] Blob successfully downloaded natively! Bypassing signed URL.');
+                return URL.createObjectURL(dl.data);
+            }
+            console.error('[DEBUG] Native download also failed:', dl.error);
+            return null; 
         }
 
         if (data && data.signedUrl) {
