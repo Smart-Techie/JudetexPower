@@ -166,7 +166,12 @@ class ShopApp {
         const photo_path = await this.DB.uploadPhoto(file);
         if (!photo_path) {
             this.showLoading(false);
-            showToast('Photo upload failed. Please try again.', 'error');
+            showToast('Customer photo could not be uploaded. Please try again.', 'error');
+
+            // Add suggested Retry Button to UI
+            document.getElementById('reg_photo_text').innerHTML = '<span style="color:var(--danger); font-weight:bold;">UPLOAD FAILED</span><br><br><span style="text-decoration:underline; cursor:pointer;" onclick="app.captureCamera()">RETRY PHOTO UPLOAD</span>';
+            document.getElementById('reg_photo_text').style.display = 'block';
+            document.getElementById('reg_photo_img').style.display = 'none';
             return;
         }
 
@@ -202,7 +207,11 @@ class ShopApp {
         }
 
         for (let c of list) {
-            let photo = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : '../assets/dummy.jpg';
+            let photoUrl = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : null;
+            let photoHtml = photoUrl
+                ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>MISSING<br>PHOTO</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">`
+                : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">MISSING<br>PHOTO</div>`;
+
             const statusBadge = c.active_status === 'OVERDUE' ? '<span class="badge badge-danger">OVERDUE</span>'
                 : c.active_status === 'RENTED' ? '<span class="badge badge-success">RENTED</span>'
                     : '<span class="badge" style="background:#eee;color:#666;">NO ACTIVE RENTAL</span>';
@@ -210,7 +219,7 @@ class ShopApp {
             grid.innerHTML += `
                 <div class="card card-clickable flex" style="padding:16px; flex-direction:column;" onclick="app.showCustomerProfile('${c.id}')">
                     <div class="flex items-center gap-3 w-full mb-3">
-                        <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">
+                        ${photoHtml}
                         <div style="flex: 1;">
                             <div style="font-weight:700; font-size:16px;">${c.full_name}</div>
                             <div style="font-size:13px; color:var(--text-light);">${c.phone} | ${c.market_line}</div>
@@ -242,7 +251,10 @@ class ShopApp {
         }
 
         const { customer, rentals } = data;
-        let photo = customer.photo_url ? await this.DB.getPhotoUrl(customer.photo_url) : '../assets/dummy.jpg';
+        let photoUrl = customer.photo_url ? await this.DB.getPhotoUrl(customer.photo_url) : null;
+        let photoHtml = photoUrl
+            ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;\\'>MISSING<br>PHOTO</div>'" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px;">`
+            : `<div style="width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;">MISSING<br>PHOTO</div>`;
 
         const activeRental = rentals.find(r => r.status === 'RENTED' || r.status === 'OVERDUE');
         const activeLabel = activeRental ? `
@@ -273,7 +285,7 @@ class ShopApp {
         const profileHtml = `
             <div class="grid grid-cols-2 gap-4 mb-4" style="grid-template-columns: 1fr 2fr;">
                 <div class="card text-center" style="padding:32px;">
-                    <img src="${photo}" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px;">
+                    ${photoHtml}
                     <h2 style="font-size:24px; margin-bottom:8px;">${customer.full_name}</h2>
                     <p style="color:var(--text-light); font-size:16px; margin-bottom:4px;">${customer.phone}</p>
                     <p style="color:var(--text-light); font-size:16px;">${customer.market_line}</p>
@@ -318,13 +330,14 @@ class ShopApp {
         const grid = document.getElementById('rentalCustResultList');
         grid.innerHTML = '';
         for (let c of list) {
-            let photo = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : '../assets/dummy.jpg';
-            // Show only if no active rental
-            // Wait, maybe we allow them, but typically 1 rental per customer? 
-            // We just let admin decide.
+            let photoUrl = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : null;
+            let photoHtml = photoUrl
+                ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>MISSING<br>PHOTO</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">`
+                : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">MISSING<br>PHOTO</div>`;
+
             grid.innerHTML += `
-                <div class="card card-clickable flex items-center gap-3" style="padding:16px; cursor:pointer;" onclick="app.showNewRental('${c.id}', '${escape(c.full_name)}', '${c.phone}', '${c.market_line}', '${photo}')">
-                    <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">
+                <div class="card card-clickable flex items-center gap-3" style="padding:16px; cursor:pointer;" onclick="app.showNewRental('${c.id}', '${escape(c.full_name)}', '${c.phone}', '${c.market_line}', '${photoUrl || ''}')">
+                    ${photoHtml}
                     <div>
                         <div style="font-weight:700; font-size:16px;">${c.full_name}</div>
                         <div style="font-size:13px; color:var(--text-light);">${c.phone} | ${c.market_line}</div>
@@ -439,7 +452,11 @@ class ShopApp {
         }
 
         for (let r of filtered) {
-            let photo = r.customers?.photo_url ? await this.DB.getPhotoUrl(r.customers.photo_url) : '../assets/dummy.jpg';
+            let photoUrl = r.customers?.photo_url ? await this.DB.getPhotoUrl(r.customers.photo_url) : null;
+            let photoHtml = photoUrl
+                ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:40px; height:40px; border-radius:50%; background:#ffeeee; border:1px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--danger); text-align:center; line-height:1;\\'>NO<br>PIC</div>'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc;">`
+                : `<div style="width:40px; height:40px; border-radius:50%; background:#ffeeee; border:1px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--danger); text-align:center; line-height:1;">NO<br>PIC</div>`;
+
             const rentedDate = new Date(r.rented_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' +
                 new Date(r.rented_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
@@ -448,7 +465,7 @@ class ShopApp {
 
             tr.innerHTML = `
                 <td style="font-weight:600;" onclick="app.showCustomerProfile('${r.customer_id}')" style="cursor:pointer; color:var(--primary);">${r.customers?.full_name || '—'} <div style="font-size:12px; color:var(--text-light); font-weight:normal;">${r.customers?.phone}</div></td>
-                <td><img src="${photo}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc;"></td>
+                <td>${photoHtml}</td>
                 <td style="font-weight:700; color:var(--primary);">${r.power_banks?.power_bank_number || '—'}</td>
                 <td>Line ${r.customers?.market_line || '—'}</td>
                 <td>${rentedDate}</td>
