@@ -1,4 +1,4 @@
-const CACHE_NAME = 'judetex-v3-internal';
+const CACHE_NAME = 'judetex-v4-internal';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -20,11 +20,22 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Exclude API/Supabase calls
+    if (event.request.url.includes('supabase.co')) return;
+
+    // Use Network-First strategy for application assets to ensure admin always has latest code
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
+        fetch(event.request).then((response) => {
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+                return response;
+            }
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+            });
+            return response;
         }).catch(() => {
-            // Fallback if offline
+            return caches.match(event.request);
         })
     );
 });

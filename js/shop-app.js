@@ -449,9 +449,21 @@ class ShopApp {
 
     async searchRentalCustomer() {
         const query = document.getElementById('rentalSearchCust').value || '';
-        const list = await this.DB.searchCustomers(query);
+        const res = await this.DB.searchCustomers(query);
         const grid = document.getElementById('rentalCustResultList');
         grid.innerHTML = '';
+
+        if (!res.success) {
+            grid.innerHTML = '<div style="color:var(--danger);">Error loading lookup results.</div>';
+            return;
+        }
+
+        const list = res.data;
+        if (list.length === 0) {
+            grid.innerHTML = '<div style="color:var(--text-light);">No customer match found.</div>';
+            return;
+        }
+
         for (let c of list) {
             let photoUrl = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : null;
             let photoHtml = photoUrl
