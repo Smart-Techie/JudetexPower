@@ -89,7 +89,8 @@ async function registerCustomer(payload) {
 }
 
 async function updateCustomerPhoto(custId, path) {
-    const { error } = await supabase.from('customers').update({ photo_url: path }).eq('id', custId);
+    const { data, error } = await supabase.from('customers').update({ photo_url: path }).eq('id', custId).select();
+    console.log('[DEBUG] Update Customer:', { data, error });
     if (error) {
         console.error('Update customer photo error:', error);
         return { success: false, error: error.message };
@@ -128,10 +129,12 @@ async function getPhotoUrl(path) {
     filename = filename.split('?')[0].replace(/^\/+/, '');
 
     try {
+        console.log('[DEBUG] Generating signed URL for:', filename);
         const { data, error } = await supabase.storage.from('customer-photos').createSignedUrl(filename, 3600);
+        console.log('[DEBUG] Signed URL response:', { data, error });
 
         if (error) {
-            console.error('[Storage Error] createSignedUrl securely failed:', error.message);
+            console.error('[Storage Error] createSignedUrl securely failed:', error.message, 'Filename:', filename);
             return null; // Strict rule: Do not fallback 
         }
 
