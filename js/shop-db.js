@@ -128,6 +128,33 @@ async function getAvailablePowerBanks() {
     return data || [];
 }
 
+async function getAllPowerBanks() {
+    const { data, error } = await supabase
+        .from('power_banks')
+        .select('*, rentals(*, customers(full_name))')
+        .order('power_bank_number', { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data || [] };
+}
+
+async function addPowerBank(number, condition) {
+    const { data: existing } = await supabase.from('power_banks').select('id').eq('power_bank_number', number).single();
+    if (existing) {
+        return { success: false, error: `Power bank ${number} already exists.` };
+    }
+
+    let initialStatus = 'AVAILABLE';
+    if (condition === 'DAMAGED' || condition === 'NOT_WORKING') initialStatus = 'MAINTENANCE';
+
+    const { data, error } = await supabase.from('power_banks').insert({
+        power_bank_number: number,
+        status: initialStatus,
+        condition: condition
+    }).select().single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data };
+}
+
 async function createRental(payload) {
     // payload: { customer_id, power_bank_id, amount, payment_method, charging_cord_provided, rented_by }
 
@@ -281,6 +308,48 @@ async function archiveCustomer(id, activeStatus) {
     return { success: true };
 }
 
+async function getRentalHistory() {
+    const { data, error } = await supabase
+        .from('rentals')
+        .select('*, customers(full_name), power_banks(power_bank_number)')
+        .order('rented_at', { ascending: false })
+        .limit(100);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data || [] };
+}
+
+async function getReportsData() {
+    const { data, error } = await supabase.from('rentals').select('*');
+    if (error) return { success: false };
+
+    let now = new Date();
+    let todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    let weekStart = new Date(todayStart);
+    weekStart.setDate(todayStart.getDate() - todayStart.getDay());
+
+    let monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    let d = { todayRent: 0, todayRev: 0, weekRent: 0, monthRent: 0 };
+
+    for (let r of data) {
+        let rDate = new Date(r.rented_at);
+        if (rDate >= monthStart) d.monthRent++;
+        if (rDate >= weekStart) d.weekRent++;
+        if (rDate >= todayStart) {
+            d.todayRent++;
+            d.todayRev += (r.amount || 500);
+        }
+    }
+    return { success: true, data: d };
+}
+
+async function getStaffProfiles() {
+    const { data, error } = await supabase.from('profiles').select('*').order('full_name');
+    if (error) return [];
+    return data;
+}
+
 window.ShopDB = {
     getAdminSession,
     getAdminProfile,
@@ -290,11 +359,16 @@ window.ShopDB = {
     uploadPhoto,
     getPhotoUrl,
     getAvailablePowerBanks,
+    getAllPowerBanks,
+    addPowerBank,
     createRental,
     getActiveRentals,
     getOverdueRentals,
     processReturn,
+    getRentalHistory,
     getDashboardStats,
+    getReportsData,
+    getStaffProfiles,
     markRentalsOverdue,
     signOut,
     deleteCustomer,

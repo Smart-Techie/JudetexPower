@@ -190,8 +190,8 @@
                     style="color:#FCA5A5;">Overdue <span id="nav_overdue_badge"
                         style="background:var(--danger);color:white;border-radius:10px;padding:2px 8px;font-size:12px;margin-left:8px;">0</span></a>
                 <a class="sidebar-link" data-view="history" onclick="app.setView('history')">Rental History</a>
-                <a class="sidebar-link" onclick="alert('Coming soon')">Reports</a>
-                <a class="sidebar-link" onclick="alert('Coming soon')">Staff / Settings</a>
+                <a class="sidebar-link" data-view="reports" onclick="app.setView('reports')">Reports</a>
+                <a class="sidebar-link" data-view="settings" onclick="app.setView('settings')">Staff / Settings</a>
                 <div style="margin: 24px; border-top: 1px solid rgba(255,255,255,0.1);"></div>
                 <a id="logoutBtn" onclick="app.logout()" class="sidebar-link" style="color: #FCA5A5;">Logout</a>
             </nav>
@@ -259,18 +259,77 @@
 
                 <!-- INVENTORY VIEW -->
                 <div id="view-inventory" class="view-section">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex gap-4">
+                            <div class="stat-card" style="padding:12px 24px; min-width:auto;">
+                                <div style="font-size:10px; color:var(--text-light); font-weight:700;">TOTAL</div>
+                                <div id="inv_stat_total" style="font-size:20px; font-weight:700;">0</div>
+                            </div>
+                            <div class="stat-card"
+                                style="padding:12px 24px; min-width:auto; border-bottom:3px solid var(--success);">
+                                <div style="font-size:10px; color:var(--text-light); font-weight:700;">AVAILABLE</div>
+                                <div id="inv_stat_avail" style="font-size:20px; font-weight:700;">0</div>
+                            </div>
+                            <div class="stat-card"
+                                style="padding:12px 24px; min-width:auto; border-bottom:3px solid var(--primary);">
+                                <div style="font-size:10px; color:var(--text-light); font-weight:700;">RENTED</div>
+                                <div id="inv_stat_rented" style="font-size:20px; font-weight:700;">0</div>
+                            </div>
+                            <div class="stat-card"
+                                style="padding:12px 24px; min-width:auto; border-bottom:3px solid var(--danger);">
+                                <div style="font-size:10px; color:var(--text-light); font-weight:700;">OVERDUE</div>
+                                <div id="inv_stat_overdue" style="font-size:20px; font-weight:700; color:var(--danger)">
+                                    0</div>
+                            </div>
+                            <div class="stat-card"
+                                style="padding:12px 24px; min-width:auto; border-bottom:3px solid #f59e0b;">
+                                <div style="font-size:10px; color:var(--text-light); font-weight:700;">MAINTENANCE</div>
+                                <div id="inv_stat_maint" style="font-size:20px; font-weight:700; color:#f59e0b">0</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="app.showAddPowerBank()">+ ADD POWER BANK</button>
+                    </div>
+
                     <div class="card p-0" style="overflow-x:auto;">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Power Bank</th>
-                                    <th>Status</th>
-                                    <th>Condition</th>
-                                    <th>Notes</th>
+                                    <th>POWER BANK</th>
+                                    <th>STATUS</th>
+                                    <th>CONDITION</th>
+                                    <th>CURRENT CUSTOMER</th>
+                                    <th>LAST RENTAL</th>
+                                    <th>ACTION</th>
                                 </tr>
                             </thead>
                             <tbody id="inventoryTableBody"></tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- ADD POWER BANK MODAL -->
+                <div id="addPbModal"
+                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+                    <div class="card" style="width:100%; max-width:400px; padding:32px;">
+                        <h3 class="mb-4">ADD NEW POWER BANK</h3>
+                        <div class="form-group mb-3">
+                            <label class="form-label">POWER BANK NUMBER</label>
+                            <input type="text" id="new_pb_num" class="form-control" placeholder="e.g. PB-009">
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label">CONDITION</label>
+                            <select id="new_pb_cond" class="form-control">
+                                <option value="GOOD">GOOD</option>
+                                <option value="MINOR_DAMAGE">MINOR DAMAGE</option>
+                                <option value="DAMAGED">DAMAGED</option>
+                                <option value="NOT_WORKING">NOT WORKING</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-secondary flex-1"
+                                onclick="document.getElementById('addPbModal').style.display='none'">CANCEL</button>
+                            <button class="btn btn-primary flex-1" onclick="app.addPowerBank()">SAVE</button>
+                        </div>
                     </div>
                 </div>
 
@@ -433,6 +492,54 @@
                             </thead>
                             <tbody id="historyTableBody"></tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- REPORTS VIEW -->
+                <div id="view-reports" class="view-section">
+                    <div class="card mb-4" style="padding:24px;">
+                        <h3 class="mb-4">RENTAL SUMMARY</h3>
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="stat-card" style="border-bottom:3px solid var(--primary);">
+                                <div class="stat-card-title">TODAY'S RENTALS</div>
+                                <div class="stat-card-value" id="rep_today_rent">0</div>
+                            </div>
+                            <div class="stat-card" style="border-bottom:3px solid var(--success);">
+                                <div class="stat-card-title">TODAY'S REVENUE</div>
+                                <div class="stat-card-value" id="rep_today_rev">₦0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-card-title">THIS WEEK RENTALS</div>
+                                <div class="stat-card-value" id="rep_week_rent">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-card-title">THIS MONTH RENTALS</div>
+                                <div class="stat-card-value" id="rep_month_rent">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SETTINGS VIEW -->
+                <div id="view-settings" class="view-section">
+                    <div class="card mb-4" style="max-width: 600px; margin: 0 auto;">
+                        <h3 class="mb-4">BUSINESS SETTINGS</h3>
+                        <div class="form-group mb-3">
+                            <label class="form-label">BUSINESS NAME</label>
+                            <input type="text" class="form-control" value="Judetex Power" disabled>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">STANDARD RENTAL PRICE (₦)</label>
+                            <input type="text" class="form-control" value="500" disabled>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label">RENTAL PERIOD</label>
+                            <input type="text" class="form-control" value="Market Day" disabled>
+                        </div>
+
+                        <h3 class="mb-4 mt-5" style="border-top:1px solid var(--border); padding-top:24px;">REGISTERED
+                            STAFF</h3>
+                        <div id="settingsStaffList">Loading staff...</div>
                     </div>
                 </div>
 

@@ -86,6 +86,8 @@ class ShopApp {
         if (viewName === 'history') this.loadHistory();
         if (viewName === 'dashboard') this.loadDashboardData();
         if (viewName === 'rented' || viewName === 'overdue') this.loadRentedData();
+        if (viewName === 'reports') this.loadReports();
+        if (viewName === 'settings') this.loadSettings();
     }
 
     async loadDashboardData() {
@@ -721,31 +723,104 @@ class ShopApp {
 
     // Inventory
     async loadInventory() {
-        const { data, error } = await this.DB.supabase.from('power_banks').select('*').order('power_bank_number', { ascending: true });
+        this.showLoading(true);
+        const res = await this.DB.getAllPowerBanks();
+        this.showLoading(false);
+
         const tbody = document.getElementById('inventoryTableBody');
         tbody.innerHTML = '';
-        if (!data || data.length === 0) return;
+
+        if (!res.success) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger" style="padding:40px;">Unable to load power bank inventory.</td></tr>`;
+            console.error(res.error);
+            return;
+        }
+
+        const data = res.data;
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-light" style="padding:40px;">No power banks available.</td></tr>`;
+            return;
+        }
+
+        let avail = 0, rented = 0, overdue = 0, maint = 0;
 
         data.forEach(pb => {
+            if (pb.status === 'AVAILABLE') avail++;
+            else if (pb.status === 'RENTED') rented++;
+            else if (pb.status === 'OVERDUE') overdue++;
+            else if (pb.status === 'MAINTENANCE') maint++;
+
             const statusColor = pb.status === 'AVAILABLE' ? 'var(--success)' : pb.status === 'RENTED' || pb.status === 'OVERDUE' ? 'var(--primary)' : 'var(--danger)';
+
+            // Find active rental context securely
+            const activeRentals = pb.rentals ? pb.rentals.filter(r => ['RENTED', 'OVERDUE'].includes(r.status)) : [];
+            const currentRental = activeRentals.length > 0 ? activeRentals[0] : null;
+
             tbody.innerHTML += `
                <tr>
                 <td style="font-weight:700; color:var(--primary);">${pb.power_bank_number}</td>
                 <td style="color:${statusColor}; font-weight:700;">${pb.status}</td>
                 <td>${pb.condition}</td>
-                <td>${pb.notes || '—'}</td>
+                <td>${currentRental ? currentRental.customers?.full_name : '—'}</td>
+                <td>${currentRental ? new Date(currentRental.rented_at).toLocaleDateString() : '—'}</td>
+                <td><button class="btn btn-outline" style="padding:4px 8px; font-size:12px;">View</button></td>
                </tr>
             `;
         });
+
+        document.getElementById('inv_stat_total').innerText = data.length;
+        document.getElementById('inv_stat_avail').innerText = avail;
+        document.getElementById('inv_stat_rented').innerText = rented;
+        document.getElementById('inv_stat_overdue').innerText = overdue;
+        document.getElementById('inv_stat_maint').innerText = maint;
+    }
+
+    showAddPowerBank() {
+        document.getElementById('new_pb_num').value = '';
+        document.getElementById('new_pb_cond').value = 'GOOD';
+        document.getElementById('addPbModal').style.display = 'flex';
+    }
+
+    async addPowerBank() {
+        const num = document.getElementById('new_pb_num').value.trim();
+        const cond = document.getElementById('new_pb_cond').value;
+        if (!num) {
+            alert('Power Bank Number is required');
+            return;
+        }
+
+        this.showLoading(true);
+        const res = await this.DB.addPowerBank(num, cond);
+        this.showLoading(false);
+
+        if (res.success) {
+            document.getElementById('addPbModal').style.display = 'none';
+            showToast('Power Bank Added');
+            this.loadInventory();
+        } else {
+            alert(res.error);
+        }
     }
 
     // History
     async loadHistory() {
-        // limit 50
-        const { data, error } = await this.DB.supabase.from('rentals').select('*, customers(full_name), power_banks(power_bank_number)').order('rented_at', { ascending: false }).limit(50);
+        this.showLoading(true);
+        const res = await this.DB.getRentalHistory();
+        this.showLoading(false);
+
         const tbody = document.getElementById('historyTableBody');
         tbody.innerHTML = '';
-        if (!data || data.length === 0) return;
+
+        if (!res.success) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger" style="padding:40px;">Unable to load history.</td></tr>`;
+            return;
+        }
+
+        const data = res.data;
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-light" style="padding:40px;">No rental history yet.</td></tr>`;
+            return;
+        }
 
         data.forEach(r => {
             tbody.innerHTML += `
@@ -756,6 +831,44 @@ class ShopApp {
                 <td>${r.returned_at ? new Date(r.returned_at).toLocaleString() : '—'}</td>
                 <td><span class="badge ${r.status === 'RETURNED' ? 'badge-primary' : (r.status === 'OVERDUE' ? 'badge-danger' : 'badge-success')}">${r.status}</span></td>
                </tr>
+            `;
+        });
+    }
+
+    async loadReports() {
+        this.showLoading(true);
+        const res = await this.DB.getReportsData();
+        this.showLoading(false);
+        if (!res.success) {
+            showToast('Failed to load reports', 'error');
+            return;
+        }
+        document.getElementById('rep_today_rent').innerText = res.data.todayRent;
+        document.getElementById('rep_today_rev').innerText = `₦${res.data.todayRev.toLocaleString()}`;
+        document.getElementById('rep_week_rent').innerText = res.data.weekRent;
+        document.getElementById('rep_month_rent').innerText = res.data.monthRent;
+    }
+
+    async loadSettings() {
+        this.showLoading(true);
+        const data = await this.DB.getStaffProfiles();
+        this.showLoading(false);
+
+        const list = document.getElementById('settingsStaffList');
+        list.innerHTML = '';
+
+        data.forEach(s => {
+            list.innerHTML += `
+                <div class="card flex justify-between items-center mb-2 p-3">
+                    <div>
+                        <div style="font-weight:700;">${s.full_name || 'Staff'}</div>
+                        <div style="font-size:13px; color:var(--text-light);">${s.email}</div>
+                    </div>
+                    <div>
+                        <span class="badge" style="background:var(--primary); color:white;">${s.role}</span>
+                        ${s.is_active ? '<span class="badge badge-success">ACTIVE</span>' : '<span class="badge badge-danger">INACTIVE</span>'}
+                    </div>
+                </div>
             `;
         });
     }
