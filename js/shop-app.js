@@ -122,13 +122,24 @@ class ShopApp {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
             const video = document.getElementById('reg_video');
+            const captureBtn = document.getElementById('btn_capture_photo');
+
             video.srcObject = stream;
             video.style.display = 'block';
-            video.play(); // Explicitly start stream logic
+            video.play();
 
             document.getElementById('reg_photo_text').style.display = 'none';
             document.getElementById('btn_open_camera').style.display = 'none';
-            document.getElementById('btn_capture_photo').style.display = 'block';
+            captureBtn.style.display = 'block';
+            captureBtn.disabled = true;
+
+            // Wait for video dimensions to populate
+            const checkReady = setInterval(() => {
+                if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+                    captureBtn.disabled = false;
+                    clearInterval(checkReady);
+                }
+            }, 100);
         } catch (e) {
             alert('Camera not accessible.');
         }
@@ -137,26 +148,47 @@ class ShopApp {
     captureCamera() {
         const video = document.getElementById('reg_video');
         const canvas = document.getElementById('reg_canvas');
+
+        if (!video || video.readyState < 2 || video.videoWidth <= 0 || video.videoHeight <= 0) {
+            showToast('Camera image is not ready. Please wait a moment and capture again.', 'error');
+            return;
+        }
+
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        this.draftPhotoDataUrl = canvas.toDataURL('image/jpeg');
 
-        video.srcObject.getTracks().forEach(t => t.stop());
-        video.style.display = 'none';
+        if (canvas.width === 0 || canvas.height === 0) {
+            showToast('Camera image is not ready.', 'error');
+            return;
+        }
 
-        const img = document.getElementById('reg_photo_img');
-        img.src = this.draftPhotoDataUrl;
-        img.style.display = 'block';
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        document.getElementById('btn_open_camera').style.display = 'block';
-        document.getElementById('btn_open_camera').innerText = '📷 RETAKE';
-        document.getElementById('btn_capture_photo').style.display = 'none';
+        canvas.toBlob((blob) => {
+            if (!blob || blob.size === 0 || blob.type !== 'image/jpeg') {
+                showToast('Failed to process valid image blob.', 'error');
+                return;
+            }
+            this.draftBlob = blob;
+            this.draftPhotoDataUrl = canvas.toDataURL('image/jpeg');
+
+            video.srcObject.getTracks().forEach(t => t.stop());
+            video.style.display = 'none';
+
+            const img = document.getElementById('reg_photo_img');
+            img.src = this.draftPhotoDataUrl;
+            img.style.display = 'block';
+
+            document.getElementById('btn_open_camera').style.display = 'block';
+            document.getElementById('btn_open_camera').innerText = '📷 RETAKE';
+            document.getElementById('btn_capture_photo').style.display = 'none';
+        }, 'image/jpeg', 0.85);
     }
 
     handlePhotoUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
+        this.draftBlob = file;
         const reader = new FileReader();
         reader.onload = (evt) => {
             this.draftPhotoDataUrl = evt.target.result;
@@ -197,14 +229,25 @@ class ShopApp {
             }
             this.showLoading(true);
 
-            // create binary from dataurl
-            const res = await fetch(this.draftPhotoDataUrl);
-            const blob = await res.blob();
+            // Native blob strictly uploaded
+            const blob = this.draftBlob;
+            if (!blob || blob.size === 0) {
+                showToast('Invalid camera output. Please retake photo.', 'error');
+                this.showLoading(false);
+                this.isSubmitting = false;
+                if (saveBtn) {
+                    saveBtn.innerText = 'REGISTER CUSTOMER';
+                    saveBtn.disabled = false;
+                    saveBtn.style.opacity = '1';
+                }
+                return;
+            }
 
             const uploadRes = await this.DB.uploadPhoto(blob);
             if (!uploadRes.success) {
                 this.showLoading(false);
-                showToast('Photo upload failed: ' + uploadRes.error, 'error');
+                showToast('Photo upload failed', 'error');
+                console.error('[Upload Debug] ', uploadRes.error);
                 document.getElementById('reg_photo_text').innerHTML = `<span style="color:var(--danger); font-weight:bold; font-size:12px; text-transform:uppercase;">Upload Failed</span><br><br><span style="font-size:11px; font-weight:600;">${uploadRes.error}</span><br><br><span style="text-decoration:underline; font-weight:600; cursor:pointer;" onclick="app.captureCamera()">RETRY PHOTO UPLOAD</span>`;
                 document.getElementById('reg_photo_text').style.display = 'block';
                 document.getElementById('reg_photo_img').style.display = 'none';
@@ -871,6 +914,18 @@ class ShopApp {
                 </div>
             `;
         });
+    }
+
+    handleImageError(imgObj, isLarge = false) {
+        imgObj.onerror = null;
+        console.error('[Image Load Trap] The browser failed to load the image network payload.');
+        console.error('- Customer ID:', imgObj.getAttribute('data-custid'));
+        console.error('- Database Path:', imgObj.getAttribute('data-path'));
+        console.error('- Attempted URL:', imgObj.src);
+
+        let size = isLarge ? '160px' : '60px';
+        let fs = isLarge ? '16px' : '10px';
+        imgObj.outerHTML = `<div style="width:${size}; height:${size}; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:${fs}; font-weight:700; color:var(--danger); text-align:center; line-height:1.2; margin: ${isLarge ? '0 auto 16px' : '0'};">PHOTO<br>UNAVAILABLE</div>`;
     }
 
     logout() {

@@ -109,36 +109,31 @@ async function uploadPhoto(blob) {
 async function getPhotoUrl(path) {
     if (!path) return null;
 
-    // 1. If it's a raw base64 data string (from older localStorage mockups), allow it natively
     if (path.startsWith('data:')) return path;
 
-    // 2. Extract bare filename from any legacy absolute URLs
+    // Remove legacy pathing natively 
     let filename = path;
     if (path.includes('customer-photos/')) {
-        filename = path.split('customer-photos/').pop().split('?')[0];
-        // Strip any leading slashes just in case
-        filename = filename.replace(/^\/+/, '');
+        filename = path.split('customer-photos/').pop();
     }
+    filename = filename.split('?')[0].replace(/^\/+/, '');
 
     try {
-        // 3. Attempt to generate a secure signed URL (Works for both Private and Public buckets)
-        const { data, error } = await supabase.storage.from('customer-photos').createSignedUrl(filename, 60 * 60 * 24);
+        const { data, error } = await supabase.storage.from('customer-photos').createSignedUrl(filename, 3600);
 
-        if (!error && data?.signedUrl) {
+        if (error) {
+            console.error('[Storage Error] createSignedUrl securely failed:', error.message);
+            return null; // Strict rule: Do not fallback 
+        }
+
+        if (data && data.signedUrl) {
             return data.signedUrl;
         }
-
-        // 4. If creating a signed URL explicitly fails (e.g., bucket doesn't have RLS setup properly yet), fallback to public URL
-        const pub = supabase.storage.from('customer-photos').getPublicUrl(filename);
-        if (pub && pub.data && pub.data.publicUrl) {
-            return pub.data.publicUrl;
-        }
     } catch (e) {
-        console.error('Storage URL fallback executed:', e);
+        console.error('[Storage Exception] generating signed URL:', e);
     }
 
-    // 5. Ultimate fallback: just return the raw string (might be a valid external HTTP link)
-    return path;
+    return null;
 }
 
 async function getAvailablePowerBanks() {
