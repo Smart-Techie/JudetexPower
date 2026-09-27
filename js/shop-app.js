@@ -295,6 +295,9 @@ class ShopApp {
                     <button class="btn btn-primary w-full mt-4" onclick="app.showNewRental('${customer.id}', '${escape(customer.full_name)}')">
                         + NEW RENTAL
                     </button>
+                    <button class="btn btn-outline w-full mt-3" style="color:var(--danger); border-color:var(--danger);" onclick="app.deleteCustomerPrompt('${customer.id}', '${escape(customer.full_name)}', ${rentals.length})">
+                        🗑 DELETE CUSTOMER
+                    </button>
                 </div>
                 
                 <div class="card" style="padding:32px;">
@@ -315,6 +318,28 @@ class ShopApp {
 
         document.getElementById('profileContainer').innerHTML = profileHtml;
         this.setView('profile');
+    }
+
+    async deleteCustomerPrompt(id, nameEscaped, totalRentals) {
+        if (totalRentals > 0) {
+            alert('This customer cannot be deleted because they have ' + totalRentals + ' rental records in their history. Database integrity prevents deletion of records with financial history.');
+            return;
+        }
+
+        const name = unescape(nameEscaped);
+        if (confirm(`Are you absolutely sure you want to delete ${name}?\n\nThis action cannot be undone.`)) {
+            this.showLoading(true);
+            const res = await this.DB.deleteCustomer(id);
+            this.showLoading(false);
+
+            if (res.success) {
+                showToast(name + ' deleted successfully.');
+                this.setView('customers');
+                this.loadDashboardData();
+            } else {
+                showToast('Failed to delete customer: ' + res.error, 'error');
+            }
+        }
     }
 
     /* ──────────────────────────────────────────────────────────
