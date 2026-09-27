@@ -63,16 +63,22 @@ async function registerCustomer(payload) {
     return { success: true, customer: data };
 }
 
-async function uploadPhoto(file) {
+async function uploadPhoto(blob) {
     const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
     const { data, error } = await supabase.storage
         .from('customer-photos')
-        .upload(filename, file);
+        .upload(filename, blob, { contentType: 'image/jpeg', upsert: true });
+
     if (error) {
         console.error('Upload Error:', error);
-        return null; // upload failed
+        return { success: false, error: error.message };
     }
-    return data.path; // returns string path
+
+    if (!data || !data.path) {
+        return { success: false, error: 'Upload returned empty path payload' };
+    }
+
+    return { success: true, path: data.path };
 }
 
 async function getPhotoUrl(path) {

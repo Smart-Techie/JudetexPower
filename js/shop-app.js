@@ -98,6 +98,8 @@ class ShopApp {
             const video = document.getElementById('reg_video');
             video.srcObject = stream;
             video.style.display = 'block';
+            video.play(); // Explicitly start stream logic
+
             document.getElementById('reg_photo_text').style.display = 'none';
             document.getElementById('btn_open_camera').style.display = 'none';
             document.getElementById('btn_capture_photo').style.display = 'block';
@@ -158,18 +160,17 @@ class ShopApp {
 
         this.showLoading(true);
 
-        // create file from dataurl
+        // create binary from dataurl
         const res = await fetch(this.draftPhotoDataUrl);
         const blob = await res.blob();
-        const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
 
-        const photo_path = await this.DB.uploadPhoto(file);
-        if (!photo_path) {
+        const uploadRes = await this.DB.uploadPhoto(blob);
+        if (!uploadRes.success) {
             this.showLoading(false);
-            showToast('Customer photo could not be uploaded. Please try again.', 'error');
+            showToast('Photo upload failed: ' + uploadRes.error, 'error');
 
             // Add suggested Retry Button to UI
-            document.getElementById('reg_photo_text').innerHTML = '<span style="color:var(--danger); font-weight:bold;">UPLOAD FAILED</span><br><br><span style="text-decoration:underline; cursor:pointer;" onclick="app.captureCamera()">RETRY PHOTO UPLOAD</span>';
+            document.getElementById('reg_photo_text').innerHTML = `<span style="color:var(--danger); font-weight:bold; font-size:12px; text-transform:uppercase;">Upload Failed</span><br><br><span style="font-size:11px; font-weight:600;">${uploadRes.error}</span><br><br><span style="text-decoration:underline; font-weight:600; cursor:pointer;" onclick="app.captureCamera()">RETRY PHOTO UPLOAD</span>`;
             document.getElementById('reg_photo_text').style.display = 'block';
             document.getElementById('reg_photo_img').style.display = 'none';
             return;
@@ -180,7 +181,8 @@ class ShopApp {
             phone: phone,
             market_line: line,
             notes: notes,
-            photo_url: photo_path // Ensure we use photo_url as in the table
+            photo_url: uploadRes.path // Ensure we use validated path
+
         });
 
         this.showLoading(false);
