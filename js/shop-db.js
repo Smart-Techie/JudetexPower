@@ -101,7 +101,7 @@ async function uploadPhoto(blob) {
     const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
     const { data, error } = await supabase.storage
         .from('customer-photos')
-        .upload(filename, blob, { contentType: 'image/jpeg', upsert: true });
+        .upload(filename, blob, { contentType: 'image/jpeg', upsert: false });
 
     if (error) {
         console.error('Upload Error:', error);
