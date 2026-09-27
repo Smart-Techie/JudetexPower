@@ -169,7 +169,7 @@ class ShopApp {
                 showToast('Failed to process valid image blob.', 'error');
                 return;
             }
-            this.draftBlob = blob;
+            this.draftBlob = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
             this.draftPhotoDataUrl = canvas.toDataURL('image/jpeg');
 
             video.srcObject.getTracks().forEach(t => t.stop());
@@ -356,7 +356,7 @@ class ShopApp {
                 showToast('Failed to process valid image blob.', 'error');
                 return;
             }
-            this.retakeBlob = blob;
+            this.retakeBlob = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
 
             video.srcObject.getTracks().forEach(t => t.stop());
             video.style.display = 'none';
