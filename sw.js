@@ -1,25 +1,21 @@
-const CACHE_NAME = 'judetex-v2';
+const CACHE_NAME = 'judetex-v3-internal';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './css/styles.css',
     './css/responsive.css',
-    './js/app.js',
     './js/utils.js',
-    './pages/admin-dashboard.html',
+    './js/shop-app.js',
+    './js/shop-db.js',
     './pages/admin-login.html',
-    './pages/customer-details.html',
-    './pages/how-it-works.html',
-    './pages/payment.html',
-    './pages/power-banks.html',
-    './pages/track-rental.html'
+    './pages/shop-dashboard.html'
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS_TO_CACHE);
-        })
+        }).then(() => self.skipWaiting())
     );
 });
 
@@ -43,6 +39,6 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
