@@ -88,6 +88,15 @@ async function registerCustomer(payload) {
     return { success: true, customer: data };
 }
 
+async function updateCustomerPhoto(custId, path) {
+    const { error } = await supabase.from('customers').update({ photo_url: path }).eq('id', custId);
+    if (error) {
+        console.error('Update customer photo error:', error);
+        return { success: false, error: error.message };
+    }
+    return { success: true };
+}
+
 async function uploadPhoto(blob) {
     const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
     const { data, error } = await supabase.storage
@@ -373,6 +382,7 @@ window.ShopDB = {
     searchCustomers,
     getCustomerDetails,
     registerCustomer,
+    updateCustomerPhoto,
     uploadPhoto,
     getPhotoUrl,
     getAvailablePowerBanks,

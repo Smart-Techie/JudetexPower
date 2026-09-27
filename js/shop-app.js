@@ -288,6 +288,124 @@ class ShopApp {
     }
 
     /* ──────────────────────────────────────────────────────────
+       CUSTOMER RETAKE PHOTO LOGIC
+    ────────────────────────────────────────────────────────── */
+    openRetakeModal(custId) {
+        this.retakeCustId = custId;
+        this.retakeBlob = null;
+        document.getElementById('retakePhotoModal').style.display = 'flex';
+        document.getElementById('retake_img').style.display = 'none';
+        document.getElementById('btn_retake_start').style.display = 'block';
+        document.getElementById('btn_retake_capture').style.display = 'none';
+        document.getElementById('btn_retake_save').disabled = true;
+    }
+
+    closeRetakeModal() {
+        document.getElementById('retakePhotoModal').style.display = 'none';
+        const video = document.getElementById('retake_video');
+        if (video && video.srcObject) {
+            video.srcObject.getTracks().forEach(t => t.stop());
+        }
+    }
+
+    async startRetakeCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            const video = document.getElementById('retake_video');
+            const captureBtn = document.getElementById('btn_retake_capture');
+
+            video.srcObject = stream;
+            video.style.display = 'block';
+            video.play();
+
+            document.getElementById('retake_img').style.display = 'none';
+            document.getElementById('btn_retake_start').style.display = 'none';
+            captureBtn.style.display = 'block';
+            captureBtn.disabled = true;
+
+            const checkReady = setInterval(() => {
+                if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+                    captureBtn.disabled = false;
+                    clearInterval(checkReady);
+                }
+            }, 100);
+        } catch (e) {
+            alert('Camera not accessible.');
+            this.closeRetakeModal();
+        }
+    }
+
+    captureRetakeCamera() {
+        const video = document.getElementById('retake_video');
+        const canvas = document.getElementById('retake_canvas');
+
+        if (!video || video.readyState < 2 || video.videoWidth <= 0 || video.videoHeight <= 0) {
+            showToast('Camera image is not ready.', 'error');
+            return;
+        }
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        if (canvas.width === 0 || canvas.height === 0) return;
+
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+            if (!blob || blob.size === 0 || blob.type !== 'image/jpeg') {
+                showToast('Failed to process valid image blob.', 'error');
+                return;
+            }
+            this.retakeBlob = blob;
+
+            video.srcObject.getTracks().forEach(t => t.stop());
+            video.style.display = 'none';
+
+            const img = document.getElementById('retake_img');
+            img.src = canvas.toDataURL('image/jpeg');
+            img.style.display = 'block';
+
+            document.getElementById('btn_retake_start').style.display = 'block';
+            document.getElementById('btn_retake_start').innerText = '📷 RETAKE';
+            document.getElementById('btn_retake_capture').style.display = 'none';
+            document.getElementById('btn_retake_save').disabled = false;
+        }, 'image/jpeg', 0.85);
+    }
+
+    async saveRetakePhoto() {
+        if (!this.retakeBlob || !this.retakeCustId) return;
+        const btn = document.getElementById('btn_retake_save');
+        btn.innerText = 'SAVING...';
+        btn.disabled = true;
+
+        this.showLoading(true);
+        const uploadRes = await this.DB.uploadPhoto(this.retakeBlob);
+
+        if (!uploadRes.success) {
+            this.showLoading(false);
+            showToast('Photo upload failed: ' + uploadRes.error, 'error');
+            btn.innerText = 'SAVE NEW PHOTO';
+            btn.disabled = false;
+            return;
+        }
+
+        const updateRes = await this.DB.updateCustomerPhoto(this.retakeCustId, uploadRes.path);
+        this.showLoading(false);
+
+        if (updateRes.success) {
+            showToast('Customer photo updated successfully!');
+            this.closeRetakeModal();
+            this.showCustomerProfile(this.retakeCustId);
+            this.searchCustomersList(); // background refresh
+        } else {
+            showToast('Database update failed: ' + updateRes.error, 'error');
+            btn.innerText = 'SAVE NEW PHOTO';
+            btn.disabled = false;
+        }
+    }
+
+
+    /* ──────────────────────────────────────────────────────────
        CUSTOMER PROFILE & DIRECTORY
     ────────────────────────────────────────────────────────── */
     async loadCustomersList() {
@@ -377,8 +495,10 @@ class ShopApp {
         const { customer, rentals } = data;
         let photoUrl = customer.photo_url ? await this.DB.getPhotoUrl(customer.photo_url) : null;
         let photoHtml = photoUrl
-            ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this)" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px; cursor:pointer;">`
+            ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this, true)" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px; cursor:pointer;">`
             : `<div style="width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;">Photo<br>unavailable</div>`;
+
+        photoHtml += `<br><button class="btn btn-outline" style="padding: 4px 12px; font-size:12px; margin-bottom:16px;" onclick="app.openRetakeModal('${customer.id}')">🔄 UPDATE PHOTO</button>`;
 
         const activeRental = rentals.find(r => r.status === 'RENTED' || r.status === 'OVERDUE');
         const activeLabel = activeRental ? `
