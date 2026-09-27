@@ -108,7 +108,18 @@ async function uploadPhoto(blob) {
 
 async function getPhotoUrl(path) {
     if (!path) return null;
-    if (path.startsWith('http')) return path;
+
+    if (path.startsWith('http')) {
+        if (path.includes('/public/customer-photos/')) {
+            path = path.substring(path.indexOf('/public/customer-photos/') + '/public/customer-photos/'.length);
+        } else if (path.includes('/sign/customer-photos/')) {
+            path = path.substring(path.indexOf('/sign/customer-photos/') + '/sign/customer-photos/'.length).split('?')[0];
+        } else if (path.includes('/object/customer-photos/')) {
+            path = path.substring(path.indexOf('/object/customer-photos/') + '/object/customer-photos/'.length);
+        } else {
+            return path;
+        }
+    }
 
     const { data, error } = await supabase.storage.from('customer-photos').createSignedUrl(path, 60 * 60 * 24);
     if (error) {
