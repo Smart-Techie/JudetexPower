@@ -143,6 +143,8 @@ class ShopApp {
     }
 
     async saveCustomer() {
+        if (this.isSubmitting) return;
+
         if (!this.draftPhotoDataUrl) {
             showToast('Photo is REQUIRED to register customer', 'error');
             return;
@@ -158,40 +160,61 @@ class ShopApp {
             return;
         }
 
-        this.showLoading(true);
+        const saveBtn = document.getElementById('btn_save_customer');
 
-        // create binary from dataurl
-        const res = await fetch(this.draftPhotoDataUrl);
-        const blob = await res.blob();
+        try {
+            this.isSubmitting = true;
+            if (saveBtn) {
+                saveBtn.innerText = 'REGISTERING...';
+                saveBtn.disabled = true;
+                saveBtn.style.opacity = '0.7';
+            }
+            this.showLoading(true);
 
-        const uploadRes = await this.DB.uploadPhoto(blob);
-        if (!uploadRes.success) {
+            // create binary from dataurl
+            const res = await fetch(this.draftPhotoDataUrl);
+            const blob = await res.blob();
+
+            const uploadRes = await this.DB.uploadPhoto(blob);
+            if (!uploadRes.success) {
+                this.showLoading(false);
+                showToast('Photo upload failed: ' + uploadRes.error, 'error');
+                document.getElementById('reg_photo_text').innerHTML = `<span style="color:var(--danger); font-weight:bold; font-size:12px; text-transform:uppercase;">Upload Failed</span><br><br><span style="font-size:11px; font-weight:600;">${uploadRes.error}</span><br><br><span style="text-decoration:underline; font-weight:600; cursor:pointer;" onclick="app.captureCamera()">RETRY PHOTO UPLOAD</span>`;
+                document.getElementById('reg_photo_text').style.display = 'block';
+                document.getElementById('reg_photo_img').style.display = 'none';
+                return;
+            }
+
+            const regRes = await this.DB.registerCustomer({
+                full_name: name,
+                phone: phone,
+                market_line: line,
+                notes: notes,
+                photo_url: uploadRes.path
+            });
+
             this.showLoading(false);
-            showToast('Photo upload failed: ' + uploadRes.error, 'error');
 
-            // Add suggested Retry Button to UI
-            document.getElementById('reg_photo_text').innerHTML = `<span style="color:var(--danger); font-weight:bold; font-size:12px; text-transform:uppercase;">Upload Failed</span><br><br><span style="font-size:11px; font-weight:600;">${uploadRes.error}</span><br><br><span style="text-decoration:underline; font-weight:600; cursor:pointer;" onclick="app.captureCamera()">RETRY PHOTO UPLOAD</span>`;
-            document.getElementById('reg_photo_text').style.display = 'block';
-            document.getElementById('reg_photo_img').style.display = 'none';
-            return;
-        }
-
-        const regRes = await this.DB.registerCustomer({
-            full_name: name,
-            phone: phone,
-            market_line: line,
-            notes: notes,
-            photo_url: uploadRes.path // Ensure we use validated path
-
-        });
-
-        this.showLoading(false);
-
-        if (regRes.success) {
-            showToast('Customer Profile Created!');
-            this.showCustomerProfile(regRes.customer.id);
-        } else {
-            showToast('Failed to create customer: ' + regRes.error, 'error');
+            if (regRes.success) {
+                showToast('Customer Profile Created!');
+                this.showCustomerProfile(regRes.customer.id);
+            } else if (regRes.exists) {
+                alert(`Duplicate Blocked:\n\nA customer already exists with the normalized phone: ${phone}.\n\nSending you to their valid profile now.`);
+                this.showCustomerProfile(regRes.customer.id);
+            } else {
+                showToast('Registration failed: ' + regRes.error, 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Unexpected error occurred', 'error');
+        } finally {
+            this.isSubmitting = false;
+            this.showLoading(false);
+            if (saveBtn) {
+                saveBtn.innerText = 'REGISTER CUSTOMER';
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = '1';
+            }
         }
     }
 

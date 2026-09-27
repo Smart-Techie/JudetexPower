@@ -59,7 +59,21 @@ async function getCustomerDetails(id) {
 }
 
 async function registerCustomer(payload) {
-    // payload: { full_name, phone, market_line, notes, photo_path }
+    // 1. Normalize and strictly query duplicates
+    const normalizedPhone = payload.phone.replace(/[^0-9+]/g, '');
+
+    const { data: existing } = await supabase.from('customers')
+        .select('*')
+        .filter('phone', 'like', `%${normalizedPhone}%`)
+        .limit(1);
+
+    if (existing && existing.length > 0) {
+        return { success: false, error: 'Customer already exists with this phone number.', exists: true, customer: existing[0] };
+    }
+
+    // 2. Format explicitly before insert
+    payload.phone = normalizedPhone;
+
     const { data, error } = await supabase.from('customers').insert(payload).select().single();
     if (error) {
         console.error('Register customer error:', error);
@@ -88,9 +102,20 @@ async function uploadPhoto(blob) {
 
 async function getPhotoUrl(path) {
     if (!path) return null;
-    if (path.startsWith('http')) return path;
-    const { data } = await supabase.storage.from('customer-photos').createSignedUrl(path, 60 * 60);
-    return data?.signedUrl || null;
+    if (path.startsWith('http') || path.startsWith('blob:')) return path;
+
+    // Use secure authenticated download to completely bypass edge-case CDN Signature 404s
+    const { data, error } = await supabase.storage.from('customer-photos').download(path);
+    if (error) {
+        console.error('Storage Download Error:', error.message);
+        return null;
+    }
+
+    if (data) {
+        return URL.createObjectURL(data);
+    }
+
+    return null;
 }
 
 async function getAvailablePowerBanks() {
