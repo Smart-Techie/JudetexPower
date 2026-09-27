@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal Shop Management | JudeTex Power</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+    <meta name="theme-color" content="#0F3D8C">
+    <style>
+        body {
+            background-color: var(--bg-secondary);
+        }
+
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 24px 0;
+            overflow-y: auto;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--accent);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            width: calc(100% - 260px);
+        }
+
+        .topbar {
+            height: var(--header-height);
+            background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .content-area {
+            padding: 32px;
+            flex: 1;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius-md);
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-card-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .card-clickable:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
+            transition: all 0.2s;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .mobile-toggle {
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a class="logo" style="color: white; font-size: 20px;">JUDETEX<span
+                        style="color: var(--accent);">POWER</span></a>
+            </div>
+            <div style="padding: 16px 24px;">
+                <button class="btn btn-primary" onclick="app.showRegister()"
+                    style="width:100%; background:var(--accent); border:none; box-shadow: 0 4px 10px rgba(255, 126, 103, 0.3); font-size: 14px; font-weight: 700;">
+                    + REGISTER CUSTOMER
+                </button>
+                <button class="btn btn-primary" onclick="app.showNewRentalSearch()"
+                    style="width:100%; margin-top:8px; font-size: 14px; font-weight: 700;">
+                    + NEW RENTAL
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <a class="sidebar-link active" data-view="dashboard" onclick="app.setView('dashboard')">Dashboard</a>
+                <a class="sidebar-link" data-view="customers" onclick="app.setView('customers')">Customers</a>
+                <a class="sidebar-link" data-view="inventory" onclick="app.setView('inventory')">Power Banks</a>
+                <a class="sidebar-link" data-view="rented" onclick="app.setView('rented')">Rented <span
+                        id="nav_rented_badge"
+                        style="background:#ddd;color:#333;border-radius:10px;padding:2px 8px;font-size:12px;margin-left:8px;">0</span></a>
+                <a class="sidebar-link" data-view="overdue" onclick="app.setView('overdue')"
+                    style="color:#FCA5A5;">Overdue <span id="nav_overdue_badge"
+                        style="background:var(--danger);color:white;border-radius:10px;padding:2px 8px;font-size:12px;margin-left:8px;">0</span></a>
+                <a class="sidebar-link" data-view="history" onclick="app.setView('history')">Rental History</a>
+                <a class="sidebar-link" onclick="alert('Coming soon')">Reports</a>
+                <a class="sidebar-link" onclick="alert('Coming soon')">Staff / Settings</a>
+                <div style="margin: 24px; border-top: 1px solid rgba(255,255,255,0.1);"></div>
+                <a id="logoutBtn" onclick="app.logout()" class="sidebar-link" style="color: #FCA5A5;">Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="flex items-center gap-2">
+                    <button class="mobile-toggle" id="sidebarToggle"
+                        style="display:none; background:none; border:none; font-size:24px; cursor:pointer;"
+                        onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+                    <h2 id="pageTitle" style="font-size: 20px;">Dashboard</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div
+                        style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
+                        SA</div>
+                    <div style="font-weight: 600; font-size: 14px;" id="adminName">Admin</div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div id="loading"
+                    style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.8); z-index:9999; align-items:center; justify-content:center; font-size:24px; font-weight:bold; color:var(--primary);">
+                    Loading...</div>
+
+                <!-- DASHBOARD VIEW -->
+                <div id="view-dashboard" class="view-section active">
+                    <div class="grid grid-cols-4 gap-3 mb-4">
+                        <div class="stat-card card-clickable" style="border-bottom: 4px solid var(--success);"
+                            onclick="app.setView('inventory')">
+                            <div class="stat-card-title">AVAILABLE</div>
+                            <div class="stat-card-value" id="dash_avail">0</div>
+                        </div>
+                        <div class="stat-card card-clickable" style="border-bottom: 4px solid var(--primary);"
+                            onclick="app.setView('rented')">
+                            <div class="stat-card-title">RENTED</div>
+                            <div class="stat-card-value" id="dash_rented">0</div>
+                        </div>
+                        <div class="stat-card card-clickable" style="border-bottom: 4px solid var(--danger);"
+                            onclick="app.setView('overdue')">
+                            <div class="stat-card-title">OVERDUE</div>
+                            <div class="stat-card-value" style="color: var(--danger);" id="dash_overdue">0</div>
+                        </div>
+                        <div class="stat-card card-clickable" onclick="app.setView('customers')">
+                            <div class="stat-card-title">CUSTOMERS</div>
+                            <div class="stat-card-value" id="dash_customers">0</div>
+                        </div>
+                        <div class="stat-card" style="grid-column: 1 / -1; background: var(--primary); color: white;">
+                            <div class="stat-card-title" style="color: rgba(255,255,255,0.7);">TODAY'S REVENUE</div>
+                            <div class="stat-card-value" style="color: white;" id="dash_revenue">₦0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CUSTOMER LIST VIEW -->
+                <div id="view-customers" class="view-section">
+                    <div class="flex justify-between items-center mb-3">
+                        <input type="text" id="custSearch" class="form-control"
+                            placeholder="Search by name, phone, line..." style="max-width:300px;"
+                            onkeyup="app.searchCustomersList()">
+                    </div>
+                    <div class="grid-cards" id="customersGrid">Loading...</div>
+                </div>
+
+                <!-- INVENTORY VIEW -->
+                <div id="view-inventory" class="view-section">
+                    <div class="card p-0" style="overflow-x:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Power Bank</th>
+                                    <th>Status</th>
+                                    <th>Condition</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- REGISTER CUSTOMER VIEW -->
+                <div id="view-register" class="view-section">
+                    <div class="card" style="max-width: 500px; margin: 0 auto; padding: 24px;">
+                        <h3 class="mb-4 text-center">REGISTER CUSTOMER</h3>
+
+                        <div class="form-group mb-4">
+                            <label class="form-label" style="text-align:center; display:block;">Customer Photo
+                                (REQUIRED)</label>
+                            <div id="reg_photo_preview"
+                                style="height:180px; width:180px; margin:0 auto 12px; background:#f5f7fa; border-radius:50%; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; border:4px solid var(--border);">
+                                <span class="text-light" id="reg_photo_text">No photo</span>
+                                <img id="reg_photo_img" src=""
+                                    style="width:100%; height:100%; object-fit:cover; display:none;">
+                                <video id="reg_video" autoplay playsinline muted
+                                    style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+                            </div>
+                            <div class="flex gap-2 justify-center">
+                                <button class="btn btn-primary flex-1" id="btn_open_camera"
+                                    onclick="app.openCamera()">📷 CAMERA</button>
+                                <button class="btn btn-secondary flex-1" id="btn_capture_photo"
+                                    onclick="app.captureCamera()" style="display:none;">📸 CAPTURE</button>
+                                <button class="btn btn-outline flex-1" id="btn_upload_photo"
+                                    onclick="document.getElementById('reg_photo_file').click()">📁 UPLOAD</button>
+                                <input type="file" id="reg_photo_file" accept="image/*" style="display:none;"
+                                    onchange="app.handlePhotoUpload(event)">
+                            </div>
+                            <canvas id="reg_canvas" style="display:none;"></canvas>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" id="reg_name" class="form-control" placeholder="e.g. Chioma">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" id="reg_phone" class="form-control" placeholder="e.g. 080...">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Market Line / Shop</label>
+                            <input type="text" id="reg_line" class="form-control" placeholder="e.g. Line K">
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label">Notes (Optional)</label>
+                            <input type="text" id="reg_notes" class="form-control" placeholder="">
+                        </div>
+
+                        <button class="btn btn-primary w-full" id="btn_save_customer" onclick="app.saveCustomer()"
+                            style="height:50px;">REGISTER CUSTOMER</button>
+                    </div>
+                </div>
+
+                <!-- CUSTOMER PROFILE VIEW -->
+                <div id="view-profile" class="view-section">
+                    <div id="profileContainer"></div>
+                </div>
+
+                <!-- NEW RENTAL / SELECT CUSTOMER -->
+                <div id="view-new-rental-search" class="view-section">
+                    <div class="card text-center mb-4" style="padding: 24px; max-width: 600px; margin: 0 auto;">
+                        <h3 class="mb-3">SEARCH CUSTOMER FOR RENTAL</h3>
+                        <input type="text" id="rentalSearchCust" class="form-control mb-3"
+                            placeholder="Search by name, phone or line" onkeyup="app.searchRentalCustomer()"
+                            style="font-size:18px; padding:16px;">
+                        <div id="rentalCustResultList" class="grid-cards" style="text-align:left;"></div>
+                    </div>
+                </div>
+
+                <!-- NEW RENTAL FORM -->
+                <div id="view-new-rental" class="view-section">
+                    <div class="card" style="max-width: 600px; margin: 0 auto; padding: 24px;">
+                        <h3 class="mb-4">NEW RENTAL</h3>
+                        <div class="flex items-center gap-4 mb-4 pb-4" style="border-bottom:1px solid var(--border);"
+                            id="newRentalCustPreview">
+                            <!-- populated via js -->
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label">Select Power Bank</label>
+                            <select id="nr_pb" class="form-control" style="font-size:18px; padding:12px;"></select>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label">Rental Fee</label>
+                            <input type="text" class="form-control" value="₦500 / MARKET DAY" disabled
+                                style="background:#eee;">
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label">Payment Method</label>
+                            <select id="nr_payment" class="form-control">
+                                <option value="CASH">CASH</option>
+                                <option value="TRANSFER">TRANSFER</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label">Charging Cord Provided?</label>
+                            <select id="nr_cord" class="form-control">
+                                <option value="false">NOT PROVIDED</option>
+                                <option value="true">PROVIDED</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary w-full" style="height:54px; font-size:18px;"
+                            onclick="app.confirmRental()">CONFIRM RENTAL</button>
+                    </div>
+                </div>
+
+                <!-- RENTED POWER BANKS / OVERDUE -->
+                <div id="view-rented" class="view-section">
+                    <div class="flex justify-between items-center mb-4">
+                        <input type="text" id="rentedSearch" class="form-control"
+                            placeholder="Search by customer, PB, line..." style="max-width:300px;"
+                            onkeyup="app.loadRentedData()">
+                    </div>
+                    <div class="card p-0" style="overflow-x:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Photo</th>
+                                    <th>Power Bank</th>
+                                    <th>Market Line</th>
+                                    <th>Rented</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rentedTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="view-history" class="view-section">
+                    <div class="card p-0" style="overflow-x:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Power Bank</th>
+                                    <th>Rented</th>
+                                    <th>Returned</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- RETURN MODAL -->
+                <div id="returnModal"
+                    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+                    <div class="card p-4 mx-2" style="width:100%; max-width:450px;">
+                        <h2 class="mb-4">RETURN POWER BANK</h2>
+                        <div id="ret_preview" class="mb-4 pb-4" style="border-bottom:1px solid var(--border);"></div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label">POWER BANK CONDITION</label>
+                            <select id="ret_pb_cond" class="form-control">
+                                <option value="GOOD">GOOD</option>
+                                <option value="MINOR_DAMAGE">MINOR DAMAGE</option>
+                                <option value="DAMAGED">DAMAGED</option>
+                                <option value="NOT_WORKING">NOT WORKING</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-3" id="ret_cord_group">
+                            <label class="form-label">CHARGING CORD</label>
+                            <select id="ret_cord_ret" class="form-control">
+                                <option value="RETURNED">RETURNED</option>
+                                <option value="NOT RETURNED">NOT RETURNED</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label class="form-label">RETURN NOTES (Optional)</label>
+                            <input type="text" id="ret_notes" class="form-control">
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button class="btn btn-secondary flex-1"
+                                onclick="document.getElementById('returnModal').style.display='none'">CANCEL</button>
+                            <button class="btn btn-primary flex-1" onclick="app.executeReturn()">CONFIRM RETURN</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container"
+        style="position: fixed; top: 24px; right: 24px; z-index: 10000; display: flex; flex-direction: column; gap: 8px;">
+    </div>
+
+    <script>
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.style.background = type === 'error' ? 'var(--danger)' : 'var(--success)';
+            toast.style.color = 'white';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = '8px';
+            toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            toast.style.fontWeight = '600';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        }
+    </script>
+    <script type="module" src="../js/shop-app.js"></script>
+</body>
+
+</html>

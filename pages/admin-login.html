@@ -93,7 +93,7 @@
                 const { success, error } = await window.SupabaseDB.adminSignIn(email, password);
 
                 if (success) {
-                    window.location.href = 'admin-dashboard.html';
+                    window.location.href = 'shop-dashboard.html';
                 } else {
                     errorDiv.style.display = 'block';
                     errorDiv.innerText = error || 'Invalid email or password.';

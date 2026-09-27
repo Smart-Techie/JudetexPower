@@ -1,0 +1,543 @@
+import './shop-db.js';
+
+class ShopApp {
+    constructor() {
+        this.DB = null;
+        this.currentView = 'dashboard';
+
+        // global state
+        this.draftPhotoDataUrl = null;
+        this.draftCustomer = null; // selected for rental
+        this.rentalsData = [];
+        this.overdueData = [];
+
+        this.init();
+    }
+
+    async init() {
+        this.showLoading(true);
+        // wait for db injection
+        while (!window.ShopDB) {
+            await new Promise(r => setTimeout(r, 50));
+        }
+        this.DB = window.ShopDB;
+
+        const profile = await this.DB.getAdminProfile();
+        if (!profile) {
+            window.location.href = 'admin-login.html';
+            return;
+        }
+
+        document.getElementById('adminName').innerText = profile.full_name || 'Staff';
+
+        // Setup daily overdue cron (in app check for simplicity)
+        await this.DB.markRentalsOverdue();
+
+        await this.loadDashboardData();
+        this.setView('dashboard');
+
+        this.showLoading(false);
+    }
+
+    showLoading(show) {
+        document.getElementById('loading').style.display = show ? 'flex' : 'none';
+    }
+
+    setView(viewName) {
+        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        document.getElementById(`view-${viewName}`).classList.add('active');
+
+        document.querySelectorAll('.sidebar-link[data-view]').forEach(l => l.classList.remove('active'));
+        const activeLink = document.querySelector(`.sidebar-link[data-view="${viewName}"]`);
+        if (activeLink) activeLink.classList.add('active');
+
+        document.getElementById('pageTitle').innerText = viewName.charAt(0).toUpperCase() + viewName.slice(1);
+
+        if (window.innerWidth <= 1024) document.getElementById('sidebar').classList.remove('open');
+        this.currentView = viewName;
+
+        // load necessary
+        if (viewName === 'customers') this.searchCustomersList();
+        if (viewName === 'inventory') this.loadInventory();
+        if (viewName === 'history') this.loadHistory();
+        if (viewName === 'dashboard') this.loadDashboardData();
+        if (viewName === 'rented' || viewName === 'overdue') this.loadRentedData();
+    }
+
+    async loadDashboardData() {
+        const stats = await this.DB.getDashboardStats();
+        document.getElementById('dash_avail').innerText = stats.availablePBs;
+        document.getElementById('dash_rented').innerText = stats.rented;
+        document.getElementById('dash_overdue').innerText = stats.overdue;
+        document.getElementById('dash_customers').innerText = stats.totalCustomers;
+        document.getElementById('dash_revenue').innerText = `₦${stats.revenue.toLocaleString()}`;
+
+        document.getElementById('nav_rented_badge').innerText = stats.rented;
+        document.getElementById('nav_overdue_badge').innerText = stats.overdue;
+        document.getElementById('nav_overdue_badge').style.display = stats.overdue > 0 ? 'inline' : 'none';
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       REGISTER CUSTOMER
+    ────────────────────────────────────────────────────────── */
+    showRegister() {
+        this.setView('register');
+        document.getElementById('reg_name').value = '';
+        document.getElementById('reg_phone').value = '';
+        document.getElementById('reg_line').value = '';
+        document.getElementById('reg_notes').value = '';
+        this.draftPhotoDataUrl = null;
+        document.getElementById('reg_photo_img').style.display = 'none';
+        document.getElementById('reg_photo_text').style.display = 'block';
+    }
+
+    // CAMERA 
+    async openCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            const video = document.getElementById('reg_video');
+            video.srcObject = stream;
+            video.style.display = 'block';
+            document.getElementById('reg_photo_text').style.display = 'none';
+            document.getElementById('btn_open_camera').style.display = 'none';
+            document.getElementById('btn_capture_photo').style.display = 'block';
+        } catch (e) {
+            alert('Camera not accessible.');
+        }
+    }
+
+    captureCamera() {
+        const video = document.getElementById('reg_video');
+        const canvas = document.getElementById('reg_canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        this.draftPhotoDataUrl = canvas.toDataURL('image/jpeg');
+
+        video.srcObject.getTracks().forEach(t => t.stop());
+        video.style.display = 'none';
+
+        const img = document.getElementById('reg_photo_img');
+        img.src = this.draftPhotoDataUrl;
+        img.style.display = 'block';
+
+        document.getElementById('btn_open_camera').style.display = 'block';
+        document.getElementById('btn_open_camera').innerText = '📷 RETAKE';
+        document.getElementById('btn_capture_photo').style.display = 'none';
+    }
+
+    handlePhotoUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            this.draftPhotoDataUrl = evt.target.result;
+            const img = document.getElementById('reg_photo_img');
+            img.src = this.draftPhotoDataUrl;
+            img.style.display = 'block';
+            document.getElementById('reg_photo_text').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async saveCustomer() {
+        if (!this.draftPhotoDataUrl) {
+            showToast('Photo is REQUIRED to register customer', 'error');
+            return;
+        }
+
+        const name = document.getElementById('reg_name').value.trim();
+        const phone = document.getElementById('reg_phone').value.trim();
+        const line = document.getElementById('reg_line').value.trim();
+        const notes = document.getElementById('reg_notes').value.trim();
+
+        if (!name || !phone || !line) {
+            showToast('Name, Phone and Line are required', 'error');
+            return;
+        }
+
+        this.showLoading(true);
+
+        // create file from dataurl
+        const res = await fetch(this.draftPhotoDataUrl);
+        const blob = await res.blob();
+        const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+
+        const photo_path = await this.DB.uploadPhoto(file);
+        if (!photo_path) {
+            this.showLoading(false);
+            showToast('Photo upload failed. Please try again.', 'error');
+            return;
+        }
+
+        const regRes = await this.DB.registerCustomer({
+            full_name: name,
+            phone: phone,
+            market_line: line,
+            notes: notes,
+            photo_url: photo_path // Ensure we use photo_url as in the table
+        });
+
+        this.showLoading(false);
+
+        if (regRes.success) {
+            showToast('Customer Profile Created!');
+            this.showCustomerProfile(regRes.customer.id);
+        } else {
+            showToast('Failed to create customer: ' + regRes.error, 'error');
+        }
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       CUSTOMER PROFILE & DIRECTORY
+    ────────────────────────────────────────────────────────── */
+    async searchCustomersList() {
+        const query = document.getElementById('custSearch')?.value || '';
+        const list = await this.DB.searchCustomers(query);
+        const grid = document.getElementById('customersGrid');
+        grid.innerHTML = '';
+        if (list.length === 0) {
+            grid.innerHTML = '<p class="text-light">No customers found.</p>';
+            return;
+        }
+
+        for (let c of list) {
+            let photo = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : '../assets/dummy.jpg';
+            grid.innerHTML += `
+                <div class="card card-clickable flex items-center gap-3" style="padding:16px;" onclick="app.showCustomerProfile('${c.id}')">
+                    <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">
+                    <div>
+                        <div style="font-weight:700; font-size:16px;">${c.full_name}</div>
+                        <div style="font-size:13px; color:var(--text-light);">${c.phone} | ${c.market_line}</div>
+                        <div style="font-size:13px; font-weight:600; color:var(--primary); margin-top:4px;">Total Rentals: ${c.rental_count}</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async showCustomerProfile(id) {
+        this.showLoading(true);
+        const data = await this.DB.getCustomerDetails(id);
+        this.showLoading(false);
+        if (!data) {
+            showToast('Failed to load profile', 'error');
+            return;
+        }
+
+        const { customer, rentals } = data;
+        let photo = customer.photo_url ? await this.DB.getPhotoUrl(customer.photo_url) : '../assets/dummy.jpg';
+
+        const activeRental = rentals.find(r => r.status === 'RENTED' || r.status === 'OVERDUE');
+        const activeLabel = activeRental ? `
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:8px; margin-top:16px; border-left:4px solid var(--primary);">
+                <div style="font-size:12px; font-weight:700; color:var(--text-light);">CURRENT RENTAL</div>
+                <div style="font-weight:700; font-size:16px; color:var(--primary); margin:4px 0;">${activeRental.power_banks.power_bank_number}</div>
+                <div style="font-size:13px; color:var(--text-light);">Since ${new Date(activeRental.rented_at).toLocaleString()}</div>
+                <div style="margin-top:10px;">
+                    <span class="badge ${activeRental.status === 'OVERDUE' ? 'badge-danger' : 'badge-success'}">${activeRental.status}</span>
+                </div>
+            </div>
+        ` : `
+            <div style="background:var(--bg-secondary); padding:16px; border-radius:8px; margin-top:16px;">
+                <div style="font-size:12px; font-weight:700; color:var(--text-light);">CURRENT RENTAL</div>
+                <div style="font-weight:700; color:var(--text-dark);">NONE</div>
+            </div>
+        `;
+
+        let historyHtml = rentals.map(r => `
+            <tr>
+                <td>${new Date(r.rented_at).toLocaleDateString()}</td>
+                <td style="font-weight:600; color:var(--primary);">${r.power_banks.power_bank_number}</td>
+                <td>₦${r.amount}</td>
+                <td><span class="badge ${r.status === 'OVERDUE' ? 'badge-danger' : (r.status === 'RETURNED' ? 'badge-primary' : 'badge-success')}">${r.status}</span></td>
+            </tr>
+        `).join('');
+
+        const profileHtml = `
+            <div class="grid grid-cols-2 gap-4 mb-4" style="grid-template-columns: 1fr 2fr;">
+                <div class="card text-center" style="padding:32px;">
+                    <img src="${photo}" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px;">
+                    <h2 style="font-size:24px; margin-bottom:8px;">${customer.full_name}</h2>
+                    <p style="color:var(--text-light); font-size:16px; margin-bottom:4px;">${customer.phone}</p>
+                    <p style="color:var(--text-light); font-size:16px;">${customer.market_line}</p>
+                    ${activeLabel}
+                    <button class="btn btn-primary w-full mt-4" onclick="app.showNewRental('${customer.id}', '${escape(customer.full_name)}')">
+                        + NEW RENTAL
+                    </button>
+                </div>
+                
+                <div class="card" style="padding:32px;">
+                    <h3 class="mb-4">RENTAL HISTORY <span style="float:right; font-size:16px; font-weight:400; color:var(--text-light);">Total: ${rentals.length}</span></h3>
+                    <div style="max-height: 400px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;">
+                        <table class="data-table" style="margin:0; width:100%;">
+                            <thead style="position:sticky; top:0; background:white;">
+                                <tr><th>Date</th><th>Power Bank</th><th>Amount</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                ${historyHtml || '<tr><td colspan="4" class="text-center text-light">No rentals yet</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('profileContainer').innerHTML = profileHtml;
+        this.setView('profile');
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       NEW RENTAL WORKFLOW
+    ────────────────────────────────────────────────────────── */
+    showNewRentalSearch() {
+        this.setView('new-rental-search');
+        document.getElementById('rentalSearchCust').value = '';
+        this.searchRentalCustomer();
+    }
+
+    async searchRentalCustomer() {
+        const query = document.getElementById('rentalSearchCust').value || '';
+        const list = await this.DB.searchCustomers(query);
+        const grid = document.getElementById('rentalCustResultList');
+        grid.innerHTML = '';
+        for (let c of list) {
+            let photo = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : '../assets/dummy.jpg';
+            // Show only if no active rental
+            // Wait, maybe we allow them, but typically 1 rental per customer? 
+            // We just let admin decide.
+            grid.innerHTML += `
+                <div class="card card-clickable flex items-center gap-3" style="padding:16px; cursor:pointer;" onclick="app.showNewRental('${c.id}', '${escape(c.full_name)}', '${c.phone}', '${c.market_line}', '${photo}')">
+                    <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">
+                    <div>
+                        <div style="font-weight:700; font-size:16px;">${c.full_name}</div>
+                        <div style="font-size:13px; color:var(--text-light);">${c.phone} | ${c.market_line}</div>
+                    </div>
+                    <div style="margin-left:auto;">
+                        <button class="btn btn-outline" style="padding:6px 16px;">SELECT</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async showNewRental(id, nameEscaped, phone = null, line = null, photo = null) {
+        let name = unescape(nameEscaped);
+        this.draftCustomer = id;
+        this.setView('new-rental');
+
+        if (!photo) {
+            // we probably arrived from profile without passing all details
+            const data = await this.DB.getCustomerDetails(id);
+            photo = data.customer.photo_url ? await this.DB.getPhotoUrl(data.customer.photo_url) : '../assets/dummy.jpg';
+            phone = data.customer.phone;
+            line = data.customer.market_line;
+            name = data.customer.full_name;
+        }
+
+        const preview = document.getElementById('newRentalCustPreview');
+        preview.innerHTML = `
+            <img src="${photo}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">
+            <div>
+                <div style="font-size:12px; font-weight:700; color:var(--text-light); text-transform:uppercase;">CUSTOMER</div>
+                <div style="font-size:20px; font-weight:700;">${name}</div>
+                <div style="font-size:14px; color:var(--text-light);">${phone} | ${line}</div>
+            </div>
+        `;
+
+        // load available PBs
+        const avail = await this.DB.getAvailablePowerBanks();
+        const sel = document.getElementById('nr_pb');
+        sel.innerHTML = '';
+        if (avail.length === 0) {
+            sel.innerHTML = '<option value="">-- NO POWER BANKS AVAILABLE --</option>';
+        } else {
+            avail.forEach(pb => {
+                sel.innerHTML += `<option value="${pb.id}">${pb.power_bank_number} - AVAILABLE (${pb.condition})</option>`;
+            });
+        }
+    }
+
+    async confirmRental() {
+        const pbId = document.getElementById('nr_pb').value;
+        const payment = document.getElementById('nr_payment').value;
+        const cord = document.getElementById('nr_cord').value === 'true';
+
+        if (!pbId) {
+            showToast('Select an available power bank', 'error');
+            return;
+        }
+
+        this.showLoading(true);
+        const session = await this.DB.getAdminSession();
+        const payload = {
+            customer_id: this.draftCustomer,
+            power_bank_id: pbId,
+            amount: 500,
+            payment_method: payment,
+            charging_cord_provided: cord,
+            rented_by: session.user.id
+        };
+
+        const res = await this.DB.createRental(payload);
+
+        this.showLoading(false);
+        if (res.success) {
+            showToast('Rental Confirmed!');
+            this.setView('rented');
+        } else {
+            showToast('Rental failed: ' + res.error, 'error');
+        }
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       RENTALS / RETURNS
+    ────────────────────────────────────────────────────────── */
+    async loadRentedData() {
+        // Load both active and overdue
+        this.rentalsData = await this.DB.getActiveRentals();
+        this.renderRentedTable();
+    }
+
+    async renderRentedTable() {
+        const query = (document.getElementById('rentedSearch')?.value || '').toLowerCase();
+        const tbody = document.getElementById('rentedTableBody');
+        tbody.innerHTML = '';
+
+        let filtered = this.rentalsData;
+        if (this.currentView === 'overdue') {
+            filtered = filtered.filter(r => r.status === 'OVERDUE');
+        }
+        if (query) {
+            filtered = filtered.filter(r =>
+                r.customers?.full_name.toLowerCase().includes(query) ||
+                r.customers?.phone.toLowerCase().includes(query) ||
+                r.power_banks?.power_bank_number.toLowerCase().includes(query) ||
+                r.customers?.market_line.toLowerCase().includes(query)
+            );
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-light" style="padding:40px;">No rentals found</td></tr>`;
+            return;
+        }
+
+        for (let r of filtered) {
+            let photo = r.customers?.photo_url ? await this.DB.getPhotoUrl(r.customers.photo_url) : '../assets/dummy.jpg';
+            const rentedDate = new Date(r.rented_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' +
+                new Date(r.rented_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+            const tr = document.createElement('tr');
+            const stateLabel = r.status === 'OVERDUE' ? `🔴 OVERDUE` : `🟢 RENTED`;
+
+            tr.innerHTML = `
+                <td style="font-weight:600;" onclick="app.showCustomerProfile('${r.customer_id}')" style="cursor:pointer; color:var(--primary);">${r.customers?.full_name || '—'} <div style="font-size:12px; color:var(--text-light); font-weight:normal;">${r.customers?.phone}</div></td>
+                <td><img src="${photo}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc;"></td>
+                <td style="font-weight:700; color:var(--primary);">${r.power_banks?.power_bank_number || '—'}</td>
+                <td>Line ${r.customers?.market_line || '—'}</td>
+                <td>${rentedDate}</td>
+                <td style="font-weight:700; color: ${r.status === 'OVERDUE' ? 'var(--danger)' : 'var(--success)'};">${stateLabel}</td>
+                <td><button class="btn btn-primary" style="padding:8px 16px; font-size:13px;" onclick="app.openReturn('${r.id}', '${r.power_bank_id}', '${escape(r.customers?.full_name)}', '${r.power_banks?.power_bank_number}', ${r.charging_cord_provided})">RETURN</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    openReturn(rentalId, pbId, nameEscaped, pbNum, cordProvided) {
+        this.draftReturn = { rentalId, pbId };
+
+        document.getElementById('ret_preview').innerHTML = `
+            <div style="font-size:12px; font-weight:700; color:var(--text-light); margin-bottom:4px;">CUSTOMER</div>
+            <div style="font-size:18px; font-weight:700;">${unescape(nameEscaped)}</div>
+            <div style="font-size:12px; font-weight:700; color:var(--text-light); margin-top:12px; margin-bottom:4px;">POWER BANK</div>
+            <div style="font-size:24px; font-weight:700; color:var(--primary);">${pbNum}</div>
+        `;
+
+        if (!cordProvided) {
+            document.getElementById('ret_cord_group').style.display = 'none';
+            document.getElementById('ret_cord_ret').value = 'NOT PROVIDED';
+        } else {
+            document.getElementById('ret_cord_group').style.display = 'block';
+            document.getElementById('ret_cord_ret').value = 'RETURNED';
+        }
+
+        document.getElementById('ret_pb_cond').value = 'GOOD';
+        document.getElementById('ret_notes').value = '';
+
+        document.getElementById('returnModal').style.display = 'flex';
+    }
+
+    async executeReturn() {
+        const pb_cond = document.getElementById('ret_pb_cond').value;
+        const cord_ret = document.getElementById('ret_cord_ret').value;
+        const notes = document.getElementById('ret_notes').value;
+
+        const session = await this.DB.getAdminSession();
+
+        this.showLoading(true);
+        const res = await this.DB.processReturn(this.draftReturn.rentalId, this.draftReturn.pbId, {
+            power_bank_condition_at_return: pb_cond,
+            charging_cord_returned: cord_ret === 'RETURNED',
+            charging_cord_condition: cord_ret === 'RETURNED' ? 'GOOD' : 'NOT_RETURNED',
+            notes: notes,
+            returned_by: session.user.id
+        });
+        this.showLoading(false);
+
+        if (res.success) {
+            document.getElementById('returnModal').style.display = 'none';
+            showToast('Return Processed Successfully');
+            this.loadRentedData();
+            this.loadDashboardData();
+        } else {
+            showToast('Return failed: ' + res.error, 'error');
+        }
+    }
+
+    // Inventory
+    async loadInventory() {
+        const { data, error } = await this.DB.supabase.from('power_banks').select('*').order('power_bank_number', { ascending: true });
+        const tbody = document.getElementById('inventoryTableBody');
+        tbody.innerHTML = '';
+        if (!data || data.length === 0) return;
+
+        data.forEach(pb => {
+            const statusColor = pb.status === 'AVAILABLE' ? 'var(--success)' : pb.status === 'RENTED' || pb.status === 'OVERDUE' ? 'var(--primary)' : 'var(--danger)';
+            tbody.innerHTML += `
+               <tr>
+                <td style="font-weight:700; color:var(--primary);">${pb.power_bank_number}</td>
+                <td style="color:${statusColor}; font-weight:700;">${pb.status}</td>
+                <td>${pb.condition}</td>
+                <td>${pb.notes || '—'}</td>
+               </tr>
+            `;
+        });
+    }
+
+    // History
+    async loadHistory() {
+        // limit 50
+        const { data, error } = await this.DB.supabase.from('rentals').select('*, customers(full_name), power_banks(power_bank_number)').order('rented_at', { ascending: false }).limit(50);
+        const tbody = document.getElementById('historyTableBody');
+        tbody.innerHTML = '';
+        if (!data || data.length === 0) return;
+
+        data.forEach(r => {
+            tbody.innerHTML += `
+               <tr>
+                <td style="font-weight:600;">${r.customers?.full_name}</td>
+                <td style="font-weight:700; color:var(--primary);">${r.power_banks?.power_bank_number}</td>
+                <td>${new Date(r.rented_at).toLocaleString()}</td>
+                <td>${r.returned_at ? new Date(r.returned_at).toLocaleString() : '—'}</td>
+                <td><span class="badge ${r.status === 'RETURNED' ? 'badge-primary' : (r.status === 'OVERDUE' ? 'badge-danger' : 'badge-success')}">${r.status}</span></td>
+               </tr>
+            `;
+        });
+    }
+
+    logout() {
+        this.DB.signOut();
+    }
+}
+
+window.app = new ShopApp();
