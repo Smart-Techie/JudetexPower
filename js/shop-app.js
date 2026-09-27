@@ -330,7 +330,7 @@ class ShopApp {
                 }
 
                 let photoHtml = photoUrl
-                    ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>Photo<br>unavailable</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
+                    ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
                     : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">Photo<br>unavailable</div>`;
 
                 const statusBadge = c.active_status === 'OVERDUE' ? '<span class="badge badge-danger">OVERDUE</span>'
@@ -377,7 +377,7 @@ class ShopApp {
         const { customer, rentals } = data;
         let photoUrl = customer.photo_url ? await this.DB.getPhotoUrl(customer.photo_url) : null;
         let photoHtml = photoUrl
-            ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;\\'>Photo<br>unavailable</div>'" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px; cursor:pointer;">`
+            ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this)" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px; cursor:pointer;">`
             : `<div style="width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;">Photo<br>unavailable</div>`;
 
         const activeRental = rentals.find(r => r.status === 'RENTED' || r.status === 'OVERDUE');
@@ -536,7 +536,7 @@ class ShopApp {
         for (let c of list) {
             let photoUrl = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : null;
             let photoHtml = photoUrl
-                ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>MISSING<br>PHOTO</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
+                ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
                 : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">MISSING<br>PHOTO</div>`;
 
             grid.innerHTML += `
@@ -691,7 +691,7 @@ class ShopApp {
         for (let r of filtered) {
             let photoUrl = r.customers?.photo_url ? await this.DB.getPhotoUrl(r.customers.photo_url) : null;
             let photoHtml = photoUrl
-                ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:40px; height:40px; border-radius:50%; background:#ffeeee; border:1px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--danger); text-align:center; line-height:1;\\'>NO<br>PIC</div>'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc; cursor:pointer;">`
+                ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this)" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc; cursor:pointer;">`
                 : `<div style="width:40px; height:40px; border-radius:50%; background:#ffeeee; border:1px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--danger); text-align:center; line-height:1;">NO<br>PIC</div>`;
 
             const rentedDate = new Date(r.rented_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' +
