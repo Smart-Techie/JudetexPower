@@ -221,33 +221,60 @@ class ShopApp {
     /* ──────────────────────────────────────────────────────────
        CUSTOMER PROFILE & DIRECTORY
     ────────────────────────────────────────────────────────── */
-    async searchCustomersList() {
+    async loadCustomersList() {
+        await this.searchCustomersList(true);
+    }
+
+    async searchCustomersList(isFullReload = false) {
+        if (this._isLoadingCustomers) return;
+        this._isLoadingCustomers = true;
+
         const query = document.getElementById('custSearch')?.value || '';
-        const list = await this.DB.searchCustomers(query);
         const grid = document.getElementById('customersGrid');
-        grid.innerHTML = '';
-        if (list.length === 0) {
-            grid.innerHTML = '<p class="text-light">No customers found.</p>';
-            return;
+
+        if (isFullReload) {
+            grid.innerHTML = '<div style="text-align:center; grid-column:1/-1; padding:40px; color:var(--text-light); font-size:16px;">Loading customers...</div>';
         }
 
-        for (let c of list) {
-            let photoUrl = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : null;
-            let photoHtml = photoUrl
-                ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>MISSING<br>PHOTO</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">`
-                : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">MISSING<br>PHOTO</div>`;
+        try {
+            const res = await this.DB.searchCustomers(query);
 
-            const statusBadge = c.active_status === 'OVERDUE' ? '<span class="badge badge-danger">OVERDUE</span>'
-                : c.active_status === 'RENTED' ? '<span class="badge badge-success">RENTED</span>'
-                    : '<span class="badge" style="background:#eee;color:#666;">NO ACTIVE RENTAL</span>';
+            if (!res.success) {
+                grid.innerHTML = `<div style="text-align:center; grid-column:1/-1; padding:40px; color:var(--danger); font-size:16px;">Unable to load customers. Please try again.<br><small style="opacity:0.7">${res.error}</small></div>`;
+                return;
+            }
 
-            grid.innerHTML += `
-                <div class="card card-clickable flex" style="padding:16px; flex-direction:column;" onclick="app.showCustomerProfile('${c.id}')">
-                    <div class="flex items-center gap-3 w-full mb-3">
-                        ${photoHtml}
-                        <div style="flex: 1;">
-                            <div style="font-weight:700; font-size:16px;">${c.full_name}</div>
-                            <div style="font-size:13px; color:var(--text-light);">${c.phone} | ${c.market_line}</div>
+            grid.innerHTML = '';
+            const list = res.data;
+
+            if (list.length === 0) {
+                grid.innerHTML = '<div style="text-align:center; grid-column:1/-1; padding:40px; color:var(--text-light); font-size:18px;">No customers registered yet.</div>';
+                return;
+            }
+
+            for (let c of list) {
+                let photoUrl = null;
+                try {
+                    photoUrl = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : null;
+                } catch (err) {
+                    console.error('[Customers] Photo mapping failed loosely:', err);
+                }
+
+                let photoHtml = photoUrl
+                    ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>Photo<br>unavailable</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">`
+                    : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">Photo<br>unavailable</div>`;
+
+                const statusBadge = c.active_status === 'OVERDUE' ? '<span class="badge badge-danger">OVERDUE</span>'
+                    : c.active_status === 'RENTED' ? '<span class="badge badge-success">RENTED</span>'
+                        : '<span class="badge" style="background:#eee;color:#666;">NO ACTIVE RENTAL</span>';
+
+                grid.innerHTML += `
+                    <div class="card card-clickable flex" style="padding:16px; flex-direction:column;" onclick="app.showCustomerProfile('${c.id}')">
+                        <div class="flex items-center gap-3 w-full mb-3">
+                            ${photoHtml}
+                            <div style="flex: 1;">
+                                <div style="font-weight:700; font-size:16px;">${c.full_name} ${c.is_active === false ? '<span style="color:var(--danger); font-size:12px;">[ARCHIVED]</span>' : ''}</div>
+                                <div style="font-size:13px; color:var(--text-light);">${c.phone} | ${c.market_line}</div>
                         </div>
                     </div>
                     <div class="flex items-center justify-between w-full" style="border-top:1px solid var(--border); padding-top:12px;">
@@ -263,6 +290,9 @@ class ShopApp {
                     <button class="btn btn-outline w-full mt-3" style="padding:6px; font-size:12px;">VIEW PROFILE / HISTORY</button>
                 </div>
             `;
+            }
+        } finally {
+            this._isLoadingCustomers = false;
         }
     }
 

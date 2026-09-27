@@ -29,8 +29,12 @@ async function searchCustomers(query, onlyActive = false) {
     }
 
     const { data, error } = await queryBuilder;
-    if (error) { console.error('Search error:', error); return []; }
-    return data.map(c => {
+    if (error) {
+        console.error('[Customers] Supabase query failed:', error);
+        return { success: false, error: error.message };
+    }
+
+    const mapped = data.map(c => {
         const rentals = c.rentals || [];
         const active = rentals.find(r => r.status === 'RENTED' || r.status === 'OVERDUE');
         return {
@@ -39,6 +43,8 @@ async function searchCustomers(query, onlyActive = false) {
             active_status: active ? active.status : 'NONE'
         };
     });
+
+    return { success: true, data: mapped };
 }
 
 async function getCustomerDetails(id) {
@@ -102,20 +108,15 @@ async function uploadPhoto(blob) {
 
 async function getPhotoUrl(path) {
     if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
+    if (path.startsWith('http')) return path;
 
-    // Use secure authenticated download to completely bypass edge-case CDN Signature 404s
-    const { data, error } = await supabase.storage.from('customer-photos').download(path);
+    const { data, error } = await supabase.storage.from('customer-photos').createSignedUrl(path, 60 * 60 * 24);
     if (error) {
-        console.error('Storage Download Error:', error.message);
+        console.error('[Customers] Photo URL generation failed:', error.message);
         return null;
     }
 
-    if (data) {
-        return URL.createObjectURL(data);
-    }
-
-    return null;
+    return data?.signedUrl || null;
 }
 
 async function getAvailablePowerBanks() {
