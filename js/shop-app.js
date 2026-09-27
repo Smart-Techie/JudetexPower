@@ -295,9 +295,14 @@ class ShopApp {
                     <button class="btn btn-primary w-full mt-4" onclick="app.showNewRental('${customer.id}', '${escape(customer.full_name)}')">
                         + NEW RENTAL
                     </button>
-                    <button class="btn btn-outline w-full mt-3" style="color:var(--danger); border-color:var(--danger);" onclick="app.deleteCustomerPrompt('${customer.id}', '${escape(customer.full_name)}', ${rentals.length})">
-                        🗑 DELETE CUSTOMER
-                    </button>
+                    ${customer.is_active === false
+                ? `<button class="btn btn-outline w-full mt-3" style="color:var(--success); border-color:var(--success);" onclick="app.reactivateCustomer('${customer.id}', '${escape(customer.full_name)}')">
+                                ✅ REACTIVATE CUSTOMER
+                           </button>`
+                : `<button class="btn btn-outline w-full mt-3" style="color:var(--danger); border-color:var(--danger);" onclick="app.deleteCustomerPrompt('${customer.id}', '${escape(customer.full_name)}', ${rentals.length}, ${activeRental ? 'true' : 'false'})">
+                                🗑 ${rentals.length > 0 ? 'DEACTIVATE CUSTOMER' : 'DELETE CUSTOMER'}
+                           </button>`
+            }
                 </div>
                 
                 <div class="card" style="padding:32px;">
@@ -320,16 +325,41 @@ class ShopApp {
         this.setView('profile');
     }
 
-    async deleteCustomerPrompt(id, nameEscaped, totalRentals) {
-        if (totalRentals > 0) {
-            alert('This customer cannot be deleted because they have ' + totalRentals + ' rental records in their history. Database integrity prevents deletion of records with financial history.');
+    async deleteCustomerPrompt(id, nameEscaped, totalRentals, hasActiveRental) {
+        if (hasActiveRental) {
+            alert('This customer currently has an active rental. Return the power bank before deactivating this customer.');
             return;
         }
 
         const name = unescape(nameEscaped);
+
+        if (totalRentals > 0) {
+            if (confirm(`Are you sure you want to deactivate ${name}?\n\nBecause they have rental history, they cannot be permanently deleted, but they will be hidden from new rentals.`)) {
+                this.showLoading(true);
+
+                // Add explicit timeout to prevent infinite Loading state
+                const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ success: false, error: 'Request timed out' }), 10000));
+                const res = await Promise.race([this.DB.archiveCustomer(id, false), timeoutPromise]);
+
+                this.showLoading(false);
+
+                if (res.success) {
+                    showToast(name + ' deactivated successfully.');
+                    this.setView('customers');
+                } else {
+                    alert('Failed to deactivate customer: ' + res.error);
+                }
+            }
+            return;
+        }
+
         if (confirm(`Are you absolutely sure you want to delete ${name}?\n\nThis action cannot be undone.`)) {
             this.showLoading(true);
-            const res = await this.DB.deleteCustomer(id);
+
+            // Add explicit timeout
+            const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ success: false, error: 'Request timed out' }), 10000));
+            const res = await Promise.race([this.DB.deleteCustomer(id), timeoutPromise]);
+
             this.showLoading(false);
 
             if (res.success) {
@@ -337,8 +367,21 @@ class ShopApp {
                 this.setView('customers');
                 this.loadDashboardData();
             } else {
-                showToast('Failed to delete customer: ' + res.error, 'error');
+                alert('Failed to delete customer: ' + res.error);
             }
+        }
+    }
+
+    async reactivateCustomer(id, nameEscaped) {
+        const name = unescape(nameEscaped);
+        this.showLoading(true);
+        const res = await this.DB.archiveCustomer(id, true);
+        this.showLoading(false);
+        if (res.success) {
+            showToast(name + ' reactivated.');
+            this.setView('customers');
+        } else {
+            alert('Failed to reactivate: ' + res.error);
         }
     }
 

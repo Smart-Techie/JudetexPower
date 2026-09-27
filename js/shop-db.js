@@ -12,11 +12,16 @@ async function getAdminProfile() {
     return data;
 }
 
-async function searchCustomers(query) {
+async function searchCustomers(query, onlyActive = false) {
     let queryBuilder = supabase
         .from('customers')
         .select('*, rentals(status)')
         .order('created_at', { ascending: false });
+
+    if (onlyActive) {
+        // Only active customers (for new rentals)
+        queryBuilder = queryBuilder.is('is_active', true);
+    }
 
     if (query) {
         const q = query.toLowerCase();
@@ -228,6 +233,28 @@ async function signOut() {
     window.location.href = 'admin-login.html';
 }
 
+async function deleteCustomer(id) {
+    const { data: cust, error: fetchErr } = await supabase.from('customers').select('photo_url').eq('id', id).single();
+    if (fetchErr) return { success: false, error: fetchErr.message };
+
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) {
+        console.error('Delete error:', error);
+        return { success: false, error: error.message };
+    }
+
+    if (cust && cust.photo_url && !cust.photo_url.startsWith('http')) {
+        await supabase.storage.from('customer-photos').remove([cust.photo_url]);
+    }
+    return { success: true };
+}
+
+async function archiveCustomer(id, activeStatus) {
+    const { error } = await supabase.from('customers').update({ is_active: activeStatus }).eq('id', id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+}
+
 window.ShopDB = {
     getAdminSession,
     getAdminProfile,
@@ -243,5 +270,7 @@ window.ShopDB = {
     processReturn,
     getDashboardStats,
     markRentalsOverdue,
-    signOut
+    signOut,
+    deleteCustomer,
+    archiveCustomer
 };
