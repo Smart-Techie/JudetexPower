@@ -109,25 +109,36 @@ async function uploadPhoto(blob) {
 async function getPhotoUrl(path) {
     if (!path) return null;
 
-    if (path.startsWith('http')) {
-        if (path.includes('/public/customer-photos/')) {
-            path = path.substring(path.indexOf('/public/customer-photos/') + '/public/customer-photos/'.length);
-        } else if (path.includes('/sign/customer-photos/')) {
-            path = path.substring(path.indexOf('/sign/customer-photos/') + '/sign/customer-photos/'.length).split('?')[0];
-        } else if (path.includes('/object/customer-photos/')) {
-            path = path.substring(path.indexOf('/object/customer-photos/') + '/object/customer-photos/'.length);
-        } else {
-            return path;
+    // 1. If it's a raw base64 data string (from older localStorage mockups), allow it natively
+    if (path.startsWith('data:')) return path;
+
+    // 2. Extract bare filename from any legacy absolute URLs
+    let filename = path;
+    if (path.includes('customer-photos/')) {
+        filename = path.split('customer-photos/').pop().split('?')[0];
+        // Strip any leading slashes just in case
+        filename = filename.replace(/^\/+/, '');
+    }
+
+    try {
+        // 3. Attempt to generate a secure signed URL (Works for both Private and Public buckets)
+        const { data, error } = await supabase.storage.from('customer-photos').createSignedUrl(filename, 60 * 60 * 24);
+
+        if (!error && data?.signedUrl) {
+            return data.signedUrl;
         }
+
+        // 4. If creating a signed URL explicitly fails (e.g., bucket doesn't have RLS setup properly yet), fallback to public URL
+        const pub = supabase.storage.from('customer-photos').getPublicUrl(filename);
+        if (pub && pub.data && pub.data.publicUrl) {
+            return pub.data.publicUrl;
+        }
+    } catch (e) {
+        console.error('Storage URL fallback executed:', e);
     }
 
-    const { data, error } = await supabase.storage.from('customer-photos').createSignedUrl(path, 60 * 60 * 24);
-    if (error) {
-        console.error('[Customers] Photo URL generation failed:', error.message);
-        return null;
-    }
-
-    return data?.signedUrl || null;
+    // 5. Ultimate fallback: just return the raw string (might be a valid external HTTP link)
+    return path;
 }
 
 async function getAvailablePowerBanks() {
