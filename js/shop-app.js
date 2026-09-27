@@ -7,9 +7,14 @@ class ShopApp {
 
         // global state
         this.draftPhotoDataUrl = null;
-        this.draftCustomer = null; // selected for rental
+        this.draftCustomer = null;
         this.rentalsData = [];
         this.overdueData = [];
+
+        // Viewer event binding
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.closePhotoViewer(e, true);
+        });
 
         this.init();
     }
@@ -41,6 +46,25 @@ class ShopApp {
 
     showLoading(show) {
         document.getElementById('loading').style.display = show ? 'flex' : 'none';
+    }
+
+    viewPhoto(src, event) {
+        if (event) event.stopPropagation();
+        if (!src || src.includes('unavailable')) return;
+
+        const modal = document.getElementById('photoViewerModal');
+        const img = document.getElementById('photoViewerImg');
+        img.src = src;
+        modal.style.display = 'flex';
+    }
+
+    closePhotoViewer(event, force = false) {
+        if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+        const modal = document.getElementById('photoViewerModal');
+        if (force || event.target === modal) {
+            modal.style.display = 'none';
+            document.getElementById('photoViewerImg').src = '';
+        }
     }
 
     setView(viewName) {
@@ -261,7 +285,7 @@ class ShopApp {
                 }
 
                 let photoHtml = photoUrl
-                    ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>Photo<br>unavailable</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">`
+                    ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>Photo<br>unavailable</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
                     : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">Photo<br>unavailable</div>`;
 
                 const statusBadge = c.active_status === 'OVERDUE' ? '<span class="badge badge-danger">OVERDUE</span>'
@@ -308,8 +332,8 @@ class ShopApp {
         const { customer, rentals } = data;
         let photoUrl = customer.photo_url ? await this.DB.getPhotoUrl(customer.photo_url) : null;
         let photoHtml = photoUrl
-            ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;\\'>MISSING<br>PHOTO</div>'" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px;">`
-            : `<div style="width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;">MISSING<br>PHOTO</div>`;
+            ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;\\'>Photo<br>unavailable</div>'" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px; cursor:pointer;">`
+            : `<div style="width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;">Photo<br>unavailable</div>`;
 
         const activeRental = rentals.find(r => r.status === 'RENTED' || r.status === 'OVERDUE');
         const activeLabel = activeRental ? `
@@ -467,7 +491,7 @@ class ShopApp {
         for (let c of list) {
             let photoUrl = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : null;
             let photoHtml = photoUrl
-                ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>MISSING<br>PHOTO</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">`
+                ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;\\'>MISSING<br>PHOTO</div>'" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
                 : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">MISSING<br>PHOTO</div>`;
 
             grid.innerHTML += `
@@ -488,11 +512,44 @@ class ShopApp {
     async showNewRental(id, nameEscaped, phone = null, line = null, photo = null) {
         let name = unescape(nameEscaped);
         this.draftCustomer = id;
+
+        this.showLoading(true);
+        const data = await this.DB.getCustomerDetails(id);
+        this.showLoading(false);
+
+        if (!data) {
+            showToast('Failed to load customer record', 'error');
+            return;
+        }
+
+        const activeRental = data.rentals.find(r => ['READY_FOR_COLLECTION', 'COLLECTED', 'RENTED', 'OVERDUE'].includes(r.status));
+
+        if (activeRental) {
+            this.setView('new-rental-blocked');
+
+            const btnCurrent = document.getElementById('btnViewBlockedRental');
+            btnCurrent.onclick = () => this.showCustomerProfile(id);
+
+            const details = document.getElementById('blockedRentalDetails');
+            details.innerHTML = `
+                <div style="font-size:16px; font-weight:700;">${name}</div>
+                <div style="font-size:14px; color:var(--text-light); margin-bottom:16px;">${data.customer.phone} | ${data.customer.market_line}</div>
+                
+                <div style="background:var(--bg-secondary); padding:16px; border-radius:8px; border-left:4px solid var(--primary); text-align:left;">
+                    <div style="font-size:12px; font-weight:700; color:var(--text-light); text-transform:uppercase;">CURRENT POWER BANK</div>
+                    <div style="font-size:18px; font-weight:700; color:var(--primary); margin-top:4px;">${activeRental.power_banks.power_bank_number}</div>
+                    <div style="font-size:13px; color:var(--text-light); margin-top:4px;">Date: ${new Date(activeRental.rented_at).toLocaleString()}</div>
+                    <div style="margin-top:8px;">
+                        <span class="badge ${activeRental.status === 'OVERDUE' ? 'badge-danger' : 'badge-success'}">${activeRental.status}</span>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
         this.setView('new-rental');
 
         if (!photo) {
-            // we probably arrived from profile without passing all details
-            const data = await this.DB.getCustomerDetails(id);
             photo = data.customer.photo_url ? await this.DB.getPhotoUrl(data.customer.photo_url) : '../assets/dummy.jpg';
             phone = data.customer.phone;
             line = data.customer.market_line;
@@ -501,7 +558,7 @@ class ShopApp {
 
         const preview = document.getElementById('newRentalCustPreview');
         preview.innerHTML = `
-            <img src="${photo}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--border);">
+            <img src="${photo}" onclick="app.viewPhoto(this.src, event)" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">
             <div>
                 <div style="font-size:12px; font-weight:700; color:var(--text-light); text-transform:uppercase;">CUSTOMER</div>
                 <div style="font-size:20px; font-weight:700;">${name}</div>
@@ -589,7 +646,7 @@ class ShopApp {
         for (let r of filtered) {
             let photoUrl = r.customers?.photo_url ? await this.DB.getPhotoUrl(r.customers.photo_url) : null;
             let photoHtml = photoUrl
-                ? `<img src="${photoUrl}" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:40px; height:40px; border-radius:50%; background:#ffeeee; border:1px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--danger); text-align:center; line-height:1;\\'>NO<br>PIC</div>'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc;">`
+                ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:40px; height:40px; border-radius:50%; background:#ffeeee; border:1px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--danger); text-align:center; line-height:1;\\'>NO<br>PIC</div>'" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc; cursor:pointer;">`
                 : `<div style="width:40px; height:40px; border-radius:50%; background:#ffeeee; border:1px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--danger); text-align:center; line-height:1;">NO<br>PIC</div>`;
 
             const rentedDate = new Date(r.rented_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' +
