@@ -102,8 +102,11 @@ async function uploadPhoto(blob) {
     if (!blob || blob.size === 0) {
         return { success: false, error: 'Invalid or empty photo payload.' };
     }
-    const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-    console.log('[Storage Upload] Initiating upload of filename:', filename, 'Blob size:', blob.size, 'bytes, type:', blob.type);
+    const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}`;
+    const filename = `${uuid}.jpg`;
+    console.log('[Storage Upload] Uploading filename:', filename, 'Blob size:', blob.size, 'bytes');
 
     const { data, error } = await supabase.storage
         .from('customer-photos')
@@ -138,27 +141,21 @@ async function getPhotoUrl(path) {
     if (!filename) return null;
 
     try {
-        // 1. Try public URL (fastest, permanent CDN URL)
-        const { data: pubData } = supabase.storage.from('customer-photos').getPublicUrl(filename);
-        if (pubData && pubData.publicUrl) {
-            console.log('[Photo URL] Generated public URL:', pubData.publicUrl);
-            return pubData.publicUrl;
+        // Strictly generate 1-hour signed URL for private storage bucket
+        const { data: signedData, error: signedErr } = await supabase.storage
+            .from('customer-photos')
+            .createSignedUrl(filename, 3600); // 1 hour expiry
+
+        if (signedErr) {
+            console.error('[Storage Error] createSignedUrl failed:', signedErr.message, 'Filename:', filename);
+            return null;
         }
 
-        // 2. Fallback to signed URL
-        const { data: signedData, error: signedErr } = await supabase.storage.from('customer-photos').createSignedUrl(filename, 3600);
-        if (!signedErr && signedData?.signedUrl) {
-            console.log('[Photo URL] Generated signed URL:', signedData.signedUrl);
+        if (signedData && signedData.signedUrl) {
             return signedData.signedUrl;
         }
-
-        console.warn('[Photo URL] Signed URL failed, fallback to download:', signedErr);
-        const dl = await supabase.storage.from('customer-photos').download(filename);
-        if (dl.data) {
-            return URL.createObjectURL(dl.data);
-        }
     } catch (e) {
-        console.error('[Photo URL Exception]:', e);
+        console.error('[Storage Exception] generating signed URL:', e);
     }
 
     return null;
