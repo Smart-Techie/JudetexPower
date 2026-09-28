@@ -99,13 +99,18 @@ async function updateCustomerPhoto(custId, path) {
 }
 
 async function uploadPhoto(blob) {
+    if (!blob || blob.size === 0) {
+        return { success: false, error: 'Invalid or empty photo payload.' };
+    }
     const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+    console.log('[Storage Upload] Initiating upload of filename:', filename, 'Blob size:', blob.size, 'bytes, type:', blob.type);
+
     const { data, error } = await supabase.storage
         .from('customer-photos')
-        .upload(filename, blob, { contentType: 'image/jpeg', upsert: false });
+        .upload(filename, blob, { contentType: 'image/jpeg', upsert: true });
 
     if (error) {
-        console.error('Upload Error:', error);
+        console.error('[Storage Upload Error]:', error);
         return { success: false, error: error.message };
     }
 
@@ -113,46 +118,47 @@ async function uploadPhoto(blob) {
         return { success: false, error: 'Upload returned empty path payload' };
     }
 
-    // DEBUG: IMMEDIATELY verify existence
-    const verify = await supabase.storage.from('customer-photos').createSignedUrl(data.path, 60);
-    console.log('[DEBUG] Immediate Verification after Upload:', verify);
+    console.log('[Storage Upload Success] Saved path:', data.path);
     return { success: true, path: data.path };
 }
 
 async function getPhotoUrl(path) {
     if (!path) return null;
 
-    if (path.startsWith('data:')) return path;
+    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
 
-    // Remove legacy pathing natively 
     let filename = path;
     if (path.includes('customer-photos/')) {
         filename = path.split('customer-photos/').pop();
     }
     filename = filename.split('?')[0].replace(/^\/+/, '');
 
-    try {
-        console.log('[DEBUG] Generating signed URL for:', filename);
-        const { data, error } = await supabase.storage.from('customer-photos').createSignedUrl(filename, 3600);
-        console.log('[DEBUG] Signed URL response:', { data, error });
+    if (!filename) return null;
 
-        if (error) {
-            console.error('[Storage Error] createSignedUrl securely failed:', error.message, 'Filename:', filename);
-            console.log('[DEBUG] Attempting native Blob download bypass...');
-            const dl = await supabase.storage.from('customer-photos').download(filename);
-            if (dl.data) {
-                console.log('[DEBUG] Blob successfully downloaded natively! Bypassing signed URL.');
-                return URL.createObjectURL(dl.data);
-            }
-            console.error('[DEBUG] Native download also failed:', dl.error);
-            return null; 
+    try {
+        // 1. Try public URL (fastest, permanent CDN URL)
+        const { data: pubData } = supabase.storage.from('customer-photos').getPublicUrl(filename);
+        if (pubData && pubData.publicUrl) {
+            console.log('[Photo URL] Generated public URL:', pubData.publicUrl);
+            return pubData.publicUrl;
         }
 
-        if (data && data.signedUrl) {
-            return data.signedUrl;
+        // 2. Fallback to signed URL
+        const { data: signedData, error: signedErr } = await supabase.storage.from('customer-photos').createSignedUrl(filename, 3600);
+        if (!signedErr && signedData?.signedUrl) {
+            console.log('[Photo URL] Generated signed URL:', signedData.signedUrl);
+            return signedData.signedUrl;
+        }
+
+        console.warn('[Photo URL] Signed URL failed, fallback to download:', signedErr);
+        const dl = await supabase.storage.from('customer-photos').download(filename);
+        if (dl.data) {
+            return URL.createObjectURL(dl.data);
         }
     } catch (e) {
-        console.error('[Storage Exception] generating signed URL:', e);
+        console.error('[Photo URL Exception]:', e);
     }
 
     return null;

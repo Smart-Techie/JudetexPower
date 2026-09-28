@@ -48,6 +48,77 @@ class ShopApp {
         document.getElementById('loading').style.display = show ? 'flex' : 'none';
     }
 
+    getInitials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+        return parts[0].substring(0, 2).toUpperCase();
+    }
+
+    getAvatarFallbackHtml(name, isLarge = false, extraCss = '') {
+        const initials = this.getInitials(name);
+        const size = isLarge ? '160px' : '60px';
+        const fontSize = isLarge ? '44px' : '20px';
+        const margin = isLarge ? 'margin:0 auto 16px;' : '';
+        return `<div style="width:${size}; height:${size}; border-radius:50%; background:linear-gradient(135deg, #0F3D8C 0%, #1E50A0 100%); color:white; display:flex; align-items:center; justify-content:center; font-size:${fontSize}; font-weight:800; letter-spacing:1px; border:2px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,0.1); flex-shrink:0; cursor:pointer; ${margin} ${extraCss}">${initials}</div>`;
+    }
+
+    async processAndCompressImage(source, maxWidth = 800, maxHeight = 800, quality = 0.7) {
+        return new Promise((resolve, reject) => {
+            try {
+                let srcWidth = 0, srcHeight = 0;
+                if (source instanceof HTMLVideoElement) {
+                    srcWidth = source.videoWidth;
+                    srcHeight = source.videoHeight;
+                } else if (source instanceof HTMLImageElement) {
+                    srcWidth = source.naturalWidth || source.width;
+                    srcHeight = source.naturalHeight || source.height;
+                } else if (source instanceof HTMLCanvasElement) {
+                    srcWidth = source.width;
+                    srcHeight = source.height;
+                }
+
+                if (!srcWidth || !srcHeight) {
+                    reject(new Error('Source element has invalid dimensions (' + srcWidth + 'x' + srcHeight + ')'));
+                    return;
+                }
+
+                let targetWidth = srcWidth;
+                let targetHeight = srcHeight;
+
+                if (targetWidth > maxWidth || targetHeight > maxHeight) {
+                    const widthRatio = maxWidth / targetWidth;
+                    const heightRatio = maxHeight / targetHeight;
+                    const ratio = Math.min(widthRatio, heightRatio);
+                    targetWidth = Math.round(targetWidth * ratio);
+                    targetHeight = Math.round(targetHeight * ratio);
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+                canvas.toBlob((blob) => {
+                    if (!blob || blob.size === 0) {
+                        reject(new Error('Failed to generate compressed blob from canvas'));
+                        return;
+                    }
+                    const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    console.log(`[Image Downscale] Original: ${srcWidth}x${srcHeight} -> Resized: ${targetWidth}x${targetHeight}. Blob size: ${Math.round(blob.size / 1024)} KB`);
+                    resolve({ blob: file, dataUrl, width: targetWidth, height: targetHeight, sizeKB: Math.round(blob.size / 1024) });
+                }, 'image/jpeg', quality);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
     viewPhoto(src, event) {
         if (event) event.stopPropagation();
         if (!src || src.includes('unavailable')) return;
@@ -150,34 +221,21 @@ class ShopApp {
         }
     }
 
-    captureCamera() {
+    async captureCamera() {
         const video = document.getElementById('reg_video');
-        const canvas = document.getElementById('reg_canvas');
-
         if (!video || video.readyState < 2 || video.videoWidth <= 0 || video.videoHeight <= 0) {
-            showToast('Camera image is not ready. Please wait a moment and capture again.', 'error');
+            showToast('Camera image is not ready. Please wait a moment.', 'error');
             return;
         }
 
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        try {
+            const compressed = await this.processAndCompressImage(video, 800, 800, 0.7);
+            this.draftBlob = compressed.blob;
+            this.draftPhotoDataUrl = compressed.dataUrl;
 
-        if (canvas.width === 0 || canvas.height === 0) {
-            showToast('Camera image is not ready.', 'error');
-            return;
-        }
-
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        canvas.toBlob((blob) => {
-            if (!blob || blob.size === 0 || blob.type !== 'image/jpeg') {
-                showToast('Failed to process valid image blob.', 'error');
-                return;
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(t => t.stop());
             }
-            this.draftBlob = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
-            this.draftPhotoDataUrl = canvas.toDataURL('image/jpeg');
-
-            video.srcObject.getTracks().forEach(t => t.stop());
             video.style.display = 'none';
 
             const img = document.getElementById('reg_photo_img');
@@ -187,22 +245,33 @@ class ShopApp {
             document.getElementById('btn_open_camera').style.display = 'block';
             document.getElementById('btn_open_camera').innerText = '📷 RETAKE';
             document.getElementById('btn_capture_photo').style.display = 'none';
-        }, 'image/jpeg', 0.85);
+            console.log('[Reg Capture Success] Compressed file size:', compressed.sizeKB, 'KB');
+        } catch (err) {
+            console.error('[Reg Capture Error]', err);
+            showToast('Failed to process camera capture: ' + err.message, 'error');
+        }
     }
 
-    handlePhotoUpload(e) {
+    async handlePhotoUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
-        this.draftBlob = file;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            this.draftPhotoDataUrl = evt.target.result;
-            const img = document.getElementById('reg_photo_img');
-            img.src = this.draftPhotoDataUrl;
-            img.style.display = 'block';
-            document.getElementById('reg_photo_text').style.display = 'none';
-        };
-        reader.readAsDataURL(file);
+        try {
+            const tempImg = new Image();
+            tempImg.onload = async () => {
+                const compressed = await this.processAndCompressImage(tempImg, 800, 800, 0.7);
+                this.draftBlob = compressed.blob;
+                this.draftPhotoDataUrl = compressed.dataUrl;
+                const img = document.getElementById('reg_photo_img');
+                img.src = this.draftPhotoDataUrl;
+                img.style.display = 'block';
+                document.getElementById('reg_photo_text').style.display = 'none';
+                console.log('[Photo Upload Compressed] Size:', compressed.sizeKB, 'KB');
+            };
+            tempImg.src = URL.createObjectURL(file);
+        } catch (err) {
+            console.error('[Photo Upload Error]', err);
+            showToast('Failed to process uploaded photo', 'error');
+        }
     }
 
     async saveCustomer() {
@@ -234,25 +303,17 @@ class ShopApp {
             }
             this.showLoading(true);
 
-            // Native blob strictly uploaded
             const blob = this.draftBlob;
             if (!blob || blob.size === 0) {
                 showToast('Invalid camera output. Please retake photo.', 'error');
-                this.showLoading(false);
-                this.isSubmitting = false;
-                if (saveBtn) {
-                    saveBtn.innerText = 'REGISTER CUSTOMER';
-                    saveBtn.disabled = false;
-                    saveBtn.style.opacity = '1';
-                }
                 return;
             }
 
+            console.log('[Save Customer] Uploading photo. Size:', blob.size, 'bytes');
             const uploadRes = await this.DB.uploadPhoto(blob);
             if (!uploadRes.success) {
-                this.showLoading(false);
-                showToast('Photo upload failed', 'error');
-                console.error('[Upload Debug] ', uploadRes.error);
+                showToast('Photo upload failed: ' + uploadRes.error, 'error');
+                console.error('[Upload Error]', uploadRes.error);
                 document.getElementById('reg_photo_text').innerHTML = `<span style="color:var(--danger); font-weight:bold; font-size:12px; text-transform:uppercase;">Upload Failed</span><br><br><span style="font-size:11px; font-weight:600;">${uploadRes.error}</span><br><br><span style="text-decoration:underline; font-weight:600; cursor:pointer;" onclick="app.captureCamera()">RETRY PHOTO UPLOAD</span>`;
                 document.getElementById('reg_photo_text').style.display = 'block';
                 document.getElementById('reg_photo_img').style.display = 'none';
@@ -267,8 +328,6 @@ class ShopApp {
                 photo_url: uploadRes.path
             });
 
-            this.showLoading(false);
-
             if (regRes.success) {
                 showToast('Customer Profile Created!');
                 this.showCustomerProfile(regRes.customer.id);
@@ -279,7 +338,7 @@ class ShopApp {
                 showToast('Registration failed: ' + regRes.error, 'error');
             }
         } catch (err) {
-            console.error(err);
+            console.error('[Save Customer Exception]', err);
             showToast('Unexpected error occurred', 'error');
         } finally {
             this.isSubmitting = false;
@@ -301,8 +360,13 @@ class ShopApp {
         document.getElementById('retakePhotoModal').style.display = 'flex';
         document.getElementById('retake_img').style.display = 'none';
         document.getElementById('btn_retake_start').style.display = 'block';
+        document.getElementById('btn_retake_start').innerText = '📷 START';
         document.getElementById('btn_retake_capture').style.display = 'none';
-        document.getElementById('btn_retake_save').disabled = true;
+
+        const saveBtn = document.getElementById('btn_retake_save');
+        saveBtn.disabled = true;
+        saveBtn.innerText = 'SAVE NEW PHOTO';
+        saveBtn.style.opacity = '1';
     }
 
     closeRetakeModal() {
@@ -311,6 +375,21 @@ class ShopApp {
         if (video && video.srcObject) {
             video.srcObject.getTracks().forEach(t => t.stop());
         }
+        const saveBtn = document.getElementById('btn_retake_save');
+        if (saveBtn) {
+            saveBtn.innerText = 'SAVE NEW PHOTO';
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = '1';
+        }
+        const startBtn = document.getElementById('btn_retake_start');
+        if (startBtn) {
+            startBtn.innerText = '📷 START';
+            startBtn.style.display = 'block';
+        }
+        document.getElementById('btn_retake_capture').style.display = 'none';
+        document.getElementById('retake_img').style.display = 'none';
+        document.getElementById('retake_img').src = '';
+        this.retakeBlob = null;
     }
 
     async startRetakeCamera() {
@@ -340,72 +419,87 @@ class ShopApp {
         }
     }
 
-    captureRetakeCamera() {
+    async captureRetakeCamera() {
         const video = document.getElementById('retake_video');
-        const canvas = document.getElementById('retake_canvas');
-
         if (!video || video.readyState < 2 || video.videoWidth <= 0 || video.videoHeight <= 0) {
             showToast('Camera image is not ready.', 'error');
             return;
         }
 
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        try {
+            const compressed = await this.processAndCompressImage(video, 800, 800, 0.7);
+            this.retakeBlob = compressed.blob;
 
-        if (canvas.width === 0 || canvas.height === 0) return;
-
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        canvas.toBlob((blob) => {
-            if (!blob || blob.size === 0 || blob.type !== 'image/jpeg') {
-                showToast('Failed to process valid image blob.', 'error');
-                return;
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(t => t.stop());
             }
-            this.retakeBlob = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
-
-            video.srcObject.getTracks().forEach(t => t.stop());
             video.style.display = 'none';
 
             const img = document.getElementById('retake_img');
-            img.src = canvas.toDataURL('image/jpeg');
+            img.src = compressed.dataUrl;
             img.style.display = 'block';
 
             document.getElementById('btn_retake_start').style.display = 'block';
             document.getElementById('btn_retake_start').innerText = '📷 RETAKE';
             document.getElementById('btn_retake_capture').style.display = 'none';
-            document.getElementById('btn_retake_save').disabled = false;
-        }, 'image/jpeg', 0.85);
+
+            const saveBtn = document.getElementById('btn_retake_save');
+            saveBtn.disabled = false;
+            saveBtn.innerText = 'SAVE NEW PHOTO';
+            saveBtn.style.opacity = '1';
+            console.log('[Retake Capture Success] Photo compressed. Size:', compressed.sizeKB, 'KB');
+        } catch (err) {
+            console.error('[Retake Capture Error]', err);
+            showToast('Failed to process retake image: ' + err.message, 'error');
+        }
     }
 
     async saveRetakePhoto() {
-        if (!this.retakeBlob || !this.retakeCustId) return;
-        const btn = document.getElementById('btn_retake_save');
-        btn.innerText = 'SAVING...';
-        btn.disabled = true;
-
-        this.showLoading(true);
-        const uploadRes = await this.DB.uploadPhoto(this.retakeBlob);
-
-        if (!uploadRes.success) {
-            this.showLoading(false);
-            showToast('Photo upload failed: ' + uploadRes.error, 'error');
-            btn.innerText = 'SAVE NEW PHOTO';
-            btn.disabled = false;
+        if (!this.retakeBlob || !this.retakeCustId) {
+            showToast('No captured photo to save. Please retake photo.', 'error');
             return;
         }
+        const btn = document.getElementById('btn_retake_save');
+        if (btn) {
+            btn.innerText = 'SAVING...';
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+        }
 
-        const updateRes = await this.DB.updateCustomerPhoto(this.retakeCustId, uploadRes.path);
-        this.showLoading(false);
+        this.showLoading(true);
+        try {
+            console.log('[Retake Save] Uploading photo blob size:', this.retakeBlob.size, 'bytes for customer:', this.retakeCustId);
+            const uploadRes = await this.DB.uploadPhoto(this.retakeBlob);
+            console.log('[Retake Save] Storage upload result:', uploadRes);
 
-        if (updateRes.success) {
-            showToast('Customer photo updated successfully!');
-            this.closeRetakeModal();
-            this.showCustomerProfile(this.retakeCustId);
-            this.searchCustomersList(); // background refresh
-        } else {
-            showToast('Database update failed: ' + updateRes.error, 'error');
-            btn.innerText = 'SAVE NEW PHOTO';
-            btn.disabled = false;
+            if (!uploadRes.success) {
+                showToast('Photo upload failed: ' + uploadRes.error, 'error');
+                return;
+            }
+
+            console.log('[Retake Save] Updating DB photo_url path to:', uploadRes.path);
+            const updateRes = await this.DB.updateCustomerPhoto(this.retakeCustId, uploadRes.path);
+            console.log('[Retake Save] DB update result:', updateRes);
+
+            if (updateRes.success) {
+                showToast('Customer photo updated successfully!');
+                const targetCustId = this.retakeCustId;
+                this.closeRetakeModal();
+                await this.showCustomerProfile(targetCustId);
+                this.searchCustomersList(); // background refresh
+            } else {
+                showToast('Database update failed: ' + updateRes.error, 'error');
+            }
+        } catch (err) {
+            console.error('[Retake Save Exception]', err);
+            showToast('Unexpected error during photo save: ' + (err.message || err), 'error');
+        } finally {
+            this.showLoading(false);
+            if (btn) {
+                btn.innerText = 'SAVE NEW PHOTO';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
         }
     }
 
@@ -453,8 +547,8 @@ class ShopApp {
                 }
 
                 let photoHtml = photoUrl
-                    ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
-                    : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">Photo<br>unavailable</div>`;
+                    ? `<img src="${photoUrl}" data-name="${escape(c.full_name)}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this, false, '${escape(c.full_name)}')" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
+                    : this.getAvatarFallbackHtml(c.full_name, false);
 
                 const statusBadge = c.active_status === 'OVERDUE' ? '<span class="badge badge-danger">OVERDUE</span>'
                     : c.active_status === 'RENTED' ? '<span class="badge badge-success">RENTED</span>'
@@ -499,9 +593,11 @@ class ShopApp {
 
         const { customer, rentals } = data;
         let photoUrl = customer.photo_url ? await this.DB.getPhotoUrl(customer.photo_url) : null;
+        console.log('[Profile Display] Customer:', customer.id, 'Photo path:', customer.photo_url, 'Resolved URL:', photoUrl);
+
         let photoHtml = photoUrl
-            ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this, true)" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px; cursor:pointer;">`
-            : `<div style="width:160px; height:160px; border-radius:50%; background:#ffeeee; border:4px solid var(--danger); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:var(--danger); text-align:center;">Photo<br>unavailable</div>`;
+            ? `<img src="${photoUrl}" data-custid="${customer.id}" data-path="${customer.photo_url}" data-name="${escape(customer.full_name)}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this, true, '${escape(customer.full_name)}')" style="width:160px; height:160px; border-radius:50%; object-fit:cover; border:4px solid var(--border); margin:0 auto 16px; cursor:pointer;">`
+            : this.getAvatarFallbackHtml(customer.full_name, true);
 
         photoHtml += `<br><button class="btn btn-outline" style="padding: 4px 12px; font-size:12px; margin-bottom:16px;" onclick="app.openRetakeModal('${customer.id}')">🔄 UPDATE PHOTO</button>`;
 
@@ -661,8 +757,8 @@ class ShopApp {
         for (let c of list) {
             let photoUrl = c.photo_url ? await this.DB.getPhotoUrl(c.photo_url) : null;
             let photoHtml = photoUrl
-                ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
-                : `<div style="width:60px; height:60px; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--danger); text-align:center; line-height:1.2;">MISSING<br>PHOTO</div>`;
+                ? `<img src="${photoUrl}" data-name="${escape(c.full_name)}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this, false, '${escape(c.full_name)}')" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--border); cursor:pointer;">`
+                : this.getAvatarFallbackHtml(c.full_name, false);
 
             grid.innerHTML += `
                 <div class="card card-clickable flex items-center gap-3" style="padding:16px; cursor:pointer;" onclick="app.showNewRental('${c.id}', '${escape(c.full_name)}', '${c.phone}', '${c.market_line}', '${photoUrl || ''}')">
@@ -816,8 +912,8 @@ class ShopApp {
         for (let r of filtered) {
             let photoUrl = r.customers?.photo_url ? await this.DB.getPhotoUrl(r.customers.photo_url) : null;
             let photoHtml = photoUrl
-                ? `<img src="${photoUrl}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this)" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc; cursor:pointer;">`
-                : `<div style="width:40px; height:40px; border-radius:50%; background:#ffeeee; border:1px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:var(--danger); text-align:center; line-height:1;">NO<br>PIC</div>`;
+                ? `<img src="${photoUrl}" data-name="${escape(r.customers?.full_name || '')}" onclick="app.viewPhoto(this.src, event)" onerror="app.handleImageError(this, false, '${escape(r.customers?.full_name || '')}')" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #ccc; cursor:pointer;">`
+                : this.getAvatarFallbackHtml(r.customers?.full_name || 'Staff', false, 'width:40px; height:40px; font-size:14px;');
 
             const rentedDate = new Date(r.rented_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' +
                 new Date(r.rented_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -1041,16 +1137,11 @@ class ShopApp {
         });
     }
 
-    handleImageError(imgObj, isLarge = false) {
+    handleImageError(imgObj, isLarge = false, nameEscaped = '') {
         imgObj.onerror = null;
-        console.error('[Image Load Trap] The browser failed to load the image network payload.');
-        console.error('- Customer ID:', imgObj.getAttribute('data-custid'));
-        console.error('- Database Path:', imgObj.getAttribute('data-path'));
-        console.error('- Attempted URL:', imgObj.src);
-
-        let size = isLarge ? '160px' : '60px';
-        let fs = isLarge ? '16px' : '10px';
-        imgObj.outerHTML = `<div style="width:${size}; height:${size}; border-radius:50%; background:#ffeeee; border:2px solid var(--danger); display:flex; align-items:center; justify-content:center; font-size:${fs}; font-weight:700; color:var(--danger); text-align:center; line-height:1.2; margin: ${isLarge ? '0 auto 16px' : '0'};">PHOTO<br>UNAVAILABLE</div>`;
+        const name = nameEscaped ? unescape(nameEscaped) : (imgObj.getAttribute('data-name') || '?');
+        console.error('[Image Load Trap] Browser failed to render photo. Path:', imgObj.getAttribute('data-path'), 'Attempted URL:', imgObj.src);
+        imgObj.outerHTML = this.getAvatarFallbackHtml(name, isLarge);
     }
 
     logout() {
